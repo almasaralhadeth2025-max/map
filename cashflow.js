@@ -571,3 +571,18 @@ async function concfSubmit() {
         btn.textContent = isEdit ? '💾 حفظ التعديلات' : '💾 حفظ في السجل';
     }
 }
+
+// expose functions globally
+window.openCompanyCashflowForm = openCompanyCashflowForm;
+window.closeCompanyCashflowForm = closeCompanyCashflowForm;
+window.ccfSubmit = ccfSubmit;
+window.ccfUpdatePreview = ccfUpdatePreview;
+window.ccfLoadRowForEdit = ccfLoadRowForEdit;
+window.ccfReset = ccfReset;
+
+// contractor
+window.openContractorCashflowForm = openContractorCashflowForm;
+window.concfSubmit = concfSubmit;
+window.concfUpdatePreview = concfUpdatePreview;
+window.concfLoadRowForEdit = concfLoadRowForEdit;
+window.concfReset = concfReset;
