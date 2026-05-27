@@ -3610,12 +3610,13 @@ async function ccfSubmit() {
     const rowIndex = isEdit ? (_ccfEditingRow['__rowIndex'] || null) : null;
 
     try {
-        await fetch(COMPANY_CF_SCRIPT_URL, {
+        
+        const r = await fetch(COMPANY_CF_SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors', // ✅ حل CORS
+            headers: {
+                'Content-Type': 'text/plain;charset=utf-8'
+            },
             body: JSON.stringify({
-                action: isEdit ? 'update' : 'insert',
-                rowIndex,
                 statement_no,
                 date,
                 amount,
@@ -3623,6 +3624,10 @@ async function ccfSubmit() {
                 notes
             })
         });
+
+        const text = await r.text();
+        console.log('response:', text);
+
 
         ccfShowFeedback('✅ تم الحفظ بنجاح', 'success');
 
