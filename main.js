@@ -3538,7 +3538,7 @@ function ccfReset(keepDate = false) {
     _ccfEditingRow = null;
     ccfSetMode('new');
     // أعد حساب رقم المستخلص التالي تلقائياً
-    ccfRefreshStatementNo();
+
 }
 
 async function ccfRefreshStatementNo() {
@@ -3549,7 +3549,8 @@ async function ccfRefreshStatementNo() {
         const data = await _cfFetchRows(COMPANY_CF_SHEET_READ_ID);
         _ccfRowsCache = data.rows;
     }
-    const rows = _ccfRowsCache;
+
+    const rows = _ccfRowsCache || [];
     const keys = rows.length ? Object.keys(rows[0]).filter(k => !k.startsWith('__')) : [];
     const noKey = keys[0] || '';   // العمود الأول هو رقم المستخلص
     const next = _cfNextStatementNo(rows, noKey);
@@ -3629,9 +3630,17 @@ async function ccfSubmit() {
             ccfShowFeedback(msg, 'success');
             showAlert(msg, 'success');
 
-            // إفراغ الكاش وإعادة تحميل القائمة
+            // إفراغ الكاش ليتم إعادة تحميله عند الحاجة
             _ccfRowsCache = null;
-            setTimeout(() => ccfReset(true), 2000);
+
+            // بعد الحفظ، نحدّث الرقم التالي ونعيد ضبط النموذج
+            setTimeout(async () => {
+                await ccfRefreshStatementNo();   // حساب الرقم التالي من جديد
+                ccfReset(true);                  // مسح الحقول (مع الاحتفاظ بالتاريخ)
+                // تأكيد ظهور الرقم الجديد
+                const inp = document.getElementById('ccf_statement_no');
+                if (inp && !inp.value) await ccfRefreshStatementNo();
+            }, 1500);
         } else {
             throw new Error(resp.message || 'فشل الحفظ');
         }
