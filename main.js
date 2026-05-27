@@ -3396,8 +3396,8 @@ function _cfNextStatementNoForContractor(rows, contractorName) {
 
         const keys = Object.keys(row).filter(k => !k.startsWith("__"));
 
-        // ✅ العمود الاول = رقم المستخلص
-        const val = parseInt(row[keys[0]]);
+        // ✅ العمود الثاني = رقم المستخلص
+        const val = parseInt(row[keys[1]]);
 
         if (!isNaN(val)) {
             maxNum = Math.max(maxNum, val);
@@ -3567,17 +3567,34 @@ async function ccfRefreshStatementNo() {
         let maxNum = 0;
         let lastVal = '';
         const dataRows = [];
-        const headers = lines[0] ? lines[0].split(',').map(h => h.trim()) : [];
+        
+        const headers = lines[0] ? parseCSVLine(lines[0]) : [];
+
+        const headersClean = headers.map(h => h.trim().toLowerCase());
+
+        const noIndex = headersClean.findIndex(h => 
+            h.includes("رقم") || h.includes("statement"));
 
         for (let i = 1; i < lines.length; i++) {
             const cols = parseCSVLine(lines[i]);
-            const noVal = (cols[0] || '').trim(); // العمود A = رقم المستخلص
+
+            // ✅ نجيب قيمة رقم المستخلص من العمود الصح
+            const noVal = (cols[noIndex] || '').trim();
+
             const n = parseInt(noVal.replace(/\D/g, '')) || 0;
-            console.log('[ccf] row', i, '| col0:', noVal, '| parsed num:', n);
-            if (n > maxNum) { maxNum = n; lastVal = noVal; }
+
+            console.log('[ccf] row', i, '| value:', noVal, '| parsed:', n);
+
+            if (n > maxNum) {
+                maxNum = n;
+                lastVal = noVal;
+            }
+
             // بناء object للسجل
             const obj = {};
-            headers.forEach((h, idx) => { obj[h] = cols[idx] || ''; });
+            headers.forEach((h, idx) => {
+                obj[h] = cols[idx] || '';
+            });
             obj['__rowIndex'] = i;
             dataRows.push(obj);
         }
