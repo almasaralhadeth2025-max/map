@@ -16,24 +16,34 @@ let _concfEditingRow = null;
 
 /* ── جلب صفوف شيت CSV وإرجاعها كـ array of objects ── */
 async function _cfFetchRows(sheetId) {
-    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`;
-    const r = await fetch(url);
+  // شيت الشركة فقط — اقرأ من السكريبت مباشرة
+  if (sheetId === COMPANY_CF_SHEET_READ_ID) {
+    const r = await fetch(COMPANY_CF_SCRIPT_URL, { redirect: 'follow' });
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    const csv = await r.text();
-    if (csv.trim().startsWith('<')) throw new Error('not public');
-    const lines = csv.split('\n').filter(l => l.trim());
-    if (lines.length < 2) return { headers: [], rows: [] };
-    const headers = parseCSVLine(lines[0]);
-    const rows = [];
-    for (let i = 1; i < lines.length; i++) {
-        const vals = parseCSVLine(lines[i]);
-        if (!vals.some(v => v.trim())) continue;
-        const obj = {};
-        headers.forEach((h, idx) => { obj[h.trim()] = vals[idx] || ''; });
-        obj['__rowIndex'] = i; // 1-based (header=0)
-        rows.push(obj);
-    }
-    return { headers, rows };
+    const json = await r.json();
+    if (json.status !== 'success') throw new Error(json.message || 'error');
+    return json.data; // { headers, rows }
+  }
+
+  // باقي الشيتات تفضل CSV (أو اعمل نفس الشيء لشيت المقاولين)
+  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const csv = await r.text();
+  if (csv.trim().startsWith('<')) throw new Error('not public');
+  const lines = csv.split('\n').filter(l => l.trim());
+  if (lines.length < 2) return { headers: [], rows: [] };
+  const headers = parseCSVLine(lines[0]);
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = parseCSVLine(lines[i]);
+    if (!vals.some(v => v.trim())) continue;
+    const obj = {};
+    headers.forEach((h, idx) => { obj[h.trim()] = vals[idx] || ''; });
+    obj['__rowIndex'] = i;
+    rows.push(obj);
+  }
+  return { headers, rows };
 }
 
 /* ── استخراج آخر رقم مستخلص وإرجاع التالي ── */
