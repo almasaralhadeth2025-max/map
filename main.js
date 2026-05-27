@@ -3544,81 +3544,22 @@ function ccfReset(keepDate = false) {
 async function ccfRefreshStatementNo() {
     const inp = document.getElementById('ccf_statement_no');
     if (!inp) return;
-    inp.value = '';
-    inp.placeholder = '⏳ جاري الجلب...';
-    try {
-        _ccfRowsCache = null;
-        // جلب CSV مباشرة وقراءة العمود الأول (رقم المستخلص) من كل صف
-        const url = 'https://docs.google.com/spreadsheets/d/' + COMPANY_CF_SHEET_READ_ID + '/export?format=csv&gid=0&t=' + Date.now();
-        const r = await fetch(url);
-        const csv = await r.text();
-        console.log('[ccf] csv first 200 chars:', csv.slice(0, 200));
 
-        if (csv.trim().startsWith('<')) {
-            console.warn('[ccf] sheet not public or login required');
-            inp.placeholder = 'تحقق من إعدادات الشيت';
-            return;
-        }
-
-        const lines = csv.split('\n').map(l => l.trim()).filter(l => l);
-        console.log('[ccf] total lines:', lines.length);
-
-        // العمود الأول من كل صف (بعد الـ header) = رقم المستخلص
-        let maxNum = 0;
-        let lastVal = '';
-        const dataRows = [];
-        
-        const headers = lines[0] ? parseCSVLine(lines[0]) : [];
-
-        const headersClean = headers.map(h => h.trim().toLowerCase());
-
-        const noIndex = headersClean.findIndex(h => 
-            h.includes("رقم") || h.includes("statement"));
-
-        for (let i = 1; i < lines.length; i++) {
-            const cols = parseCSVLine(lines[i]);
-
-            // ✅ نجيب قيمة رقم المستخلص من العمود الصح
-            const noVal = (cols[noIndex] || '').trim();
-
-            const n = parseInt(noVal.replace(/\D/g, '')) || 0;
-
-            console.log('[ccf] row', i, '| value:', noVal, '| parsed:', n);
-
-            if (n > maxNum) {
-                maxNum = n;
-                lastVal = noVal;
-            }
-
-            // بناء object للسجل
-            const obj = {};
-            headers.forEach((h, idx) => {
-                obj[h] = cols[idx] || '';
-            });
-            obj['__rowIndex'] = i;
-            dataRows.push(obj);
-        }
-
-        _ccfRowsCache = dataRows;
-        console.log('[ccf] maxNum:', maxNum, '| lastVal:', lastVal);
-
-        const nextNum = maxNum + 1;
-        const next = lastVal && /^\d+$/.test(lastVal)
-            ? String(nextNum).padStart(lastVal.length, '0')
-            : String(nextNum).padStart(3, '0');
-
-        console.log('[ccf] next statement no:', next);
-        inp.value = next;
-        inp.style.borderColor = 'rgba(245,200,66,0.6)';
-        inp.placeholder = '';
-        inp.title = 'رقم تلقائي — للعرض فقط';
-
-        ccfBuildHistory(dataRows);
-    } catch(e) {
-        console.error('[ccf] ccfRefreshStatementNo error:', e);
-        inp.placeholder = 'مثال: 001';
-        inp.value = '';
+    if (!_ccfRowsCache) {
+        const data = await _cfFetchRows(COMPANY_CF_SHEET_READ_ID);
+        _ccfRowsCache = data.rows;
     }
+
+    const rows = _ccfRowsCache;
+
+    const keys = Object.keys(rows[0] || {}).filter(k => !k.startsWith("__"));
+
+    // ✅ الشركة = العمود الأول
+    const noKey = keys[0] || '';
+
+    const next = _cfNextStatementNo(rows, noKey);
+
+    inp.value = next;
 }
 
 function ccfUpdatePreview() {
