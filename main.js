@@ -3591,6 +3591,7 @@ function ccfHideFeedback() {
 
 async function ccfSubmit() {
     ccfHideFeedback();
+
     const statement_no = document.getElementById('ccf_statement_no').value.trim();
     const date         = document.getElementById('ccf_date').value.trim();
     const amount       = parseFloat(document.getElementById('ccf_amount').value) || 0;
@@ -3605,54 +3606,53 @@ async function ccfSubmit() {
     const btn = document.getElementById('ccf_submit_btn');
     btn.disabled = true;
     btn.textContent = '⏳ جاري الحفظ...';
-    ccfShowFeedback('⏳ جاري إرسال البيانات...', 'loading');
 
-    // rowIndex = رقم الصف في الشيت (1-based بدون header)
     const rowIndex = isEdit ? (_ccfEditingRow['__rowIndex'] || null) : null;
 
     try {
-        const r = await fetch(COMPANY_CF_SCRIPT_URL, {
+        await fetch(COMPANY_CF_SCRIPT_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'text/plain' },
+            mode: 'no-cors', // ✅ حل CORS
             body: JSON.stringify({
                 action: isEdit ? 'update' : 'insert',
                 rowIndex,
-                statement_no, date, amount, status, notes
-            }),
-            redirect: 'follow'
+                statement_no,
+                date,
+                amount,
+                status,
+                notes
+            })
         });
-        const text = await r.text();
-        let resp = {};
-        try { resp = JSON.parse(text); } catch(e) {}
-        if (resp.status === 'success' || r.ok) {
-            const msg = isEdit ? '✅ تم تحديث المستخلص في سجل الشركة!' : '✅ تم حفظ المستخلص في سجل الشركة!';
-            ccfShowFeedback(msg, 'success');
-            showAlert(msg, 'success');
-            _ccfRowsCache = null; // مسح الكاش لإعادة الجلب بأحدث البيانات
-            // انتظر قليلاً عشان الشيت يتحدث ثم اجلب الرقم الجديد والسجل
-            setTimeout(async () => {
-                ccfSetMode('new');
-                document.getElementById('ccf_amount').value = '';
-                document.getElementById('ccf_status').value = 'مدفوع';
-                document.getElementById('ccf_notes').value = '';
-                document.getElementById('ccf_preview').style.display = 'none';
-                ccfHideFeedback();
-                _ccfEditingRow = null;
-                document.getElementById('ccf_date').value = new Date().toISOString().split('T')[0];
-                await ccfRefreshStatementNo();
-            }, 2500);
-        } else {
-            throw new Error(resp.message || 'فشل الحفظ');
-        }
-    } catch(e) {
+
+        ccfShowFeedback('✅ تم الحفظ بنجاح', 'success');
+
+        _ccfRowsCache = null;
+
+        setTimeout(async () => {
+            ccfSetMode('new');
+
+            document.getElementById('ccf_amount').value = '';
+            document.getElementById('ccf_status').value = 'مدفوع';
+            document.getElementById('ccf_notes').value = '';
+            document.getElementById('ccf_preview').style.display = 'none';
+
+            _ccfEditingRow = null;
+
+            document.getElementById('ccf_date').value =
+                new Date().toISOString().split('T')[0];
+
+            await ccfRefreshStatementNo();
+
+        }, 1500);
+
+    } catch (e) {
         console.error('Company CF submit error:', e);
-        ccfShowFeedback('❌ تعذر الحفظ: ' + (e.message || 'خطأ في الاتصال'), 'error');
+        ccfShowFeedback('❌ فشل الحفظ', 'error');
     } finally {
         btn.disabled = false;
         btn.textContent = isEdit ? '💾 حفظ التعديلات' : '💾 حفظ في السجل';
     }
 }
-
 /* ====================================================
    CONTRACTOR CASHFLOW FORM
    ==================================================== */
