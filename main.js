@@ -3396,8 +3396,8 @@ function _cfNextStatementNoForContractor(rows, contractorName) {
 
         const keys = Object.keys(row).filter(k => !k.startsWith("__"));
 
-        // ✅ العمود التاني = رقم المستخلص
-        const val = parseInt(row[keys[1]]);
+        // ✅ العمود الاول = رقم المستخلص
+        const val = parseInt(row[keys[0]]);
 
         if (!isNaN(val)) {
             maxNum = Math.max(maxNum, val);
@@ -3765,7 +3765,7 @@ function concfSyncContractor(val) {
     const _calcAndShow = (rows) => {
         const keys = Object.keys(rows[0] || {}).filter(k => !k.startsWith('__'));
         const cKey  = keys.find(k => /contractor|مقاول/i.test(k)) || '';
-        // العمود الأول دايماً = رقم المستخلص (عمود A)
+        // العمود الثاني دايماً = رقم المستخلص (عمود B)
         const noKey = keys[1] || '';
         const contractorRows = rows.filter(r => (r[cKey] || '').trim() === val.trim());
         console.log('[concf] contractor:', val, '| noKey:', noKey, '| rows found:', contractorRows.length, '| sample no:', contractorRows[0]?.[noKey]);
