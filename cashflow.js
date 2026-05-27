@@ -1,3 +1,30 @@
+
+// Fallback for critical functions from main.js
+if (typeof parseCSVLine !== 'function') {
+    window.parseCSVLine = function(line) {
+        const result = [];
+        let cur = '', inQ = false;
+        for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (ch === '"') {
+                if (inQ && line[i+1] === '"') { cur += '"'; i++; }
+                else inQ = !inQ;
+            } else if (ch === ',' && !inQ) {
+                result.push(cur.trim()); cur = '';
+            } else {
+                cur += ch;
+            }
+        }
+        result.push(cur.trim());
+        return result;
+    };
+}
+if (typeof openModal !== 'function') window.openModal = function(id) { document.getElementById(id).classList.add("active"); };
+if (typeof closeModal !== 'function') window.closeModal = function(id) { document.getElementById(id).classList.remove("active"); };
+if (typeof showAlert !== 'function') window.showAlert = function(msg, type) { alert(msg); };
+if (typeof fmtNum !== 'function') window.fmtNum = function(v) { const n = parseFloat(v); return isNaN(n) ? (v||"") : n.toLocaleString('en-US'); };
+
+
 // ====================================================
 // CASHFLOW MODULE - Company & Contractors
 // ====================================================
