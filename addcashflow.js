@@ -2,7 +2,7 @@
    COMPANY CASHFLOW FORM
    ==================================================== */
 
-const COMPANY_CF_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGIT6QiwUijkUXHo043WfYLm3GPT5FW592Npg4zo40vUGKXP9wJK1lHepvZxlgznp5/exec";
+const COMPANY_CF_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwwgjYBDyXw5IxvrTlZTQHz0rUqg0RHNbeIQ4aS1YoMoB0uMx7xkNCprb3voS9d6RrC/exec";
 
 /* شيت ID للشركة — يُجلب منه آخر رقم مستخلص */
 const COMPANY_CF_SHEET_READ_ID  = "1HTV35zXKroQdPJJ0XDew5rFgLwRX73-16AbtI1IymYA";
