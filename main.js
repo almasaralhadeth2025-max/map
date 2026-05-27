@@ -3611,19 +3611,18 @@ async function ccfSubmit() {
 
     try {
         
-        const r = await fetch(COMPANY_CF_SCRIPT_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'text/plain;charset=utf-8'
-            },
-            body: JSON.stringify({
-                statement_no,
-                date,
-                amount,
-                status,
-                notes
-            })
-        });
+        const formData = new FormData();
+
+         formData.append("statement_no", statement_no);
+         formData.append("date", date);
+         formData.append("amount", amount);
+         formData.append("status", status);
+         formData.append("notes", notes);
+         
+         await fetch(COMPANY_CF_SCRIPT_URL, {
+             method: "POST",
+             body: formData
+         });
 
         const text = await r.text();
         console.log('response:', text);
