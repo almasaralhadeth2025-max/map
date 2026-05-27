@@ -3549,16 +3549,10 @@ async function ccfRefreshStatementNo() {
         const data = await _cfFetchRows(COMPANY_CF_SHEET_READ_ID);
         _ccfRowsCache = data.rows;
     }
-
     const rows = _ccfRowsCache;
-
-    const keys = Object.keys(rows[0] || {}).filter(k => !k.startsWith("__"));
-
-    // ✅ الشركة = العمود الأول
-    const noKey = keys[0] || '';
-
+    const keys = rows.length ? Object.keys(rows[0]).filter(k => !k.startsWith('__')) : [];
+    const noKey = keys[0] || '';   // العمود الأول هو رقم المستخلص
     const next = _cfNextStatementNo(rows, noKey);
-
     inp.value = next;
 }
 
@@ -3606,52 +3600,44 @@ async function ccfSubmit() {
     const btn = document.getElementById('ccf_submit_btn');
     btn.disabled = true;
     btn.textContent = '⏳ جاري الحفظ...';
+    ccfShowFeedback('⏳ جاري إرسال البيانات...', 'loading');
 
     const rowIndex = isEdit ? (_ccfEditingRow['__rowIndex'] || null) : null;
 
     try {
-        
-        const formData = new FormData();
+        const response = await fetch(COMPANY_CF_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({
+                action: isEdit ? 'update' : 'insert',
+                rowIndex,
+                statement_no,
+                date,
+                amount,
+                status,
+                notes
+            }),
+            redirect: 'follow'
+        });
 
-         formData.append("statement_no", statement_no);
-         formData.append("date", date);
-         formData.append("amount", amount);
-         formData.append("status", status);
-         formData.append("notes", notes);
-         
-         await fetch(COMPANY_CF_SCRIPT_URL, {
-             method: "POST",
-             body: formData
-         });
+        const text = await response.text();
+        let resp = {};
+        try { resp = JSON.parse(text); } catch(e) {}
 
-        const text = await r.text();
-        console.log('response:', text);
+        if (resp.status === 'success' || response.ok) {
+            const msg = isEdit ? '✅ تم تحديث المستخلص!' : '✅ تم حفظ المستخلص في سجل الشركة!';
+            ccfShowFeedback(msg, 'success');
+            showAlert(msg, 'success');
 
-
-        ccfShowFeedback('✅ تم الحفظ بنجاح', 'success');
-
-        _ccfRowsCache = null;
-
-        setTimeout(async () => {
-            ccfSetMode('new');
-
-            document.getElementById('ccf_amount').value = '';
-            document.getElementById('ccf_status').value = 'مدفوع';
-            document.getElementById('ccf_notes').value = '';
-            document.getElementById('ccf_preview').style.display = 'none';
-
-            _ccfEditingRow = null;
-
-            document.getElementById('ccf_date').value =
-                new Date().toISOString().split('T')[0];
-
-            await ccfRefreshStatementNo();
-
-        }, 1500);
-
+            // إفراغ الكاش وإعادة تحميل القائمة
+            _ccfRowsCache = null;
+            setTimeout(() => ccfReset(true), 2000);
+        } else {
+            throw new Error(resp.message || 'فشل الحفظ');
+        }
     } catch (e) {
         console.error('Company CF submit error:', e);
-        ccfShowFeedback('❌ فشل الحفظ', 'error');
+        ccfShowFeedback('❌ تعذر الحفظ: ' + (e.message || 'خطأ في الاتصال'), 'error');
     } finally {
         btn.disabled = false;
         btn.textContent = isEdit ? '💾 حفظ التعديلات' : '💾 حفظ في السجل';
