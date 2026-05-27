@@ -2,31 +2,6 @@
 // CASHFLOW MODULE - Company & Contractors
 // ====================================================
 
-// --- Fallback for critical functions from main.js (in case main.js hasn't fully loaded) ---
-if (typeof parseCSVLine !== 'function') {
-    window.parseCSVLine = function(line) {
-        const result = [];
-        let cur = '', inQ = false;
-        for (let i = 0; i < line.length; i++) {
-            const ch = line[i];
-            if (ch === '"') {
-                if (inQ && line[i+1] === '"') { cur += '"'; i++; }
-                else inQ = !inQ;
-            } else if (ch === ',' && !inQ) {
-                result.push(cur.trim()); cur = '';
-            } else {
-                cur += ch;
-            }
-        }
-        result.push(cur.trim());
-        return result;
-    };
-}
-if (typeof openModal !== 'function') window.openModal = function(id) { document.getElementById(id).classList.add("active"); };
-if (typeof closeModal !== 'function') window.closeModal = function(id) { document.getElementById(id).classList.remove("active"); };
-if (typeof showAlert !== 'function') window.showAlert = function(msg, type) { alert(msg); };
-if (typeof fmtNum !== 'function') window.fmtNum = function(v) { const n = parseFloat(v); return isNaN(n) ? (v||"") : n.toLocaleString('en-US'); };
-
 // Sheet IDs for reading existing statements
 const COMPANY_CF_SHEET_READ_ID   = "1HTV35zXKroQdPJJ0XDew5rFgLwRX73-16AbtI1IymYA";
 const CONTRACTOR_CF_SHEET_READ_ID = "1xmSUQNR02prdGK9P6QiJo8ybVKwdVZAE74yUkUTbVYA";
@@ -36,8 +11,8 @@ const COMPANY_CF_SCRIPT_URL    = "https://script.google.com/macros/s/AKfycbwGIT6
 const CONTRACTOR_CF_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyrYHgPndRYq2YKAiBdEsRPM8SGEvrCBHEyTjhH5Ul4ER9keTCzZqoqTELLw1pEm2y1lQ/exec";
 
 // Global caches
-let _ccfRowsCache   = null;
-let _concfRowsCache = null;
+let _ccfRowsCache   = null;   // company
+let _concfRowsCache = null;   // contractor
 let _ccfEditingRow   = null;
 let _concfEditingRow = null;
 
@@ -87,7 +62,7 @@ function _cfNextStatementNoForContractor(rows, contractorName) {
         const cname = (row["المقاول"] || row["CONTRACTOR"] || "").trim().toLowerCase();
         if (cname !== contractorName.trim().toLowerCase()) return;
         const keys = Object.keys(row).filter(k => !k.startsWith("__"));
-        const val = parseInt(row[keys[1]]);
+        const val = parseInt(row[keys[1]]);  // second column = statement number
         if (!isNaN(val)) maxNum = Math.max(maxNum, val);
     });
     return maxNum + 1;
@@ -318,25 +293,12 @@ async function ccfSubmit() {
 /* ==================== CONTRACTOR CASHFLOW ==================== */
 
 async function openContractorCashflowForm() {
-    // Ensure contractors data is loaded before opening the modal
-    if (!window.contractorsLoaded) {
-        showAlert('⏳ جاري تحميل بيانات المقاولين...', 'loading');
-        // Wait for contractorsLoaded to become true (max 5 seconds)
-        for (let i = 0; i < 25; i++) {
-            await new Promise(r => setTimeout(r, 200));
-            if (window.contractorsLoaded) break;
-        }
-        if (!window.contractorsLoaded) {
-            showAlert('⚠️ لم يتم تحميل بيانات المقاولين بعد، حاول مرة أخرى', 'error');
-            return;
-        }
-    }
     openModal('contractorCashflowModal');
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('concf_date').value = today;
     _concfEditingRow = null;
     concfSetMode('new');
-    concfPopulateContractors(); // now data is ready
+    concfPopulateContractors();
     concfReset(true);
     try {
         const { rows } = await _cfFetchRows(CONTRACTOR_CF_SHEET_READ_ID);
@@ -352,51 +314,28 @@ function closeContractorCashflowForm() {
 
 function concfPopulateContractors() {
     const sel = document.getElementById('concf_contractor_select');
-    if (!sel) {
-        console.error('concf_contractor_select not found');
-        return;
-    }
     const currentVal = sel.value;
     sel.innerHTML = '<option value="">-- اختر من القائمة --</option>';
     const contractors = new Set();
-
-    // 1. Use contractorMap (most reliable, used by filter)
-    if (window.contractorMap && typeof window.contractorMap === 'object') {
-        Object.keys(window.contractorMap).forEach(name => {
-            if (name && name.trim()) contractors.add(name.trim());
-        });
-    } else {
-        console.warn('contractorMap not available');
-    }
-
-    // 2. Fallback: scan allData for CONTRACTOR column
-    if (window.allData && typeof window.allData === 'object') {
+    if (window.allData) {
         Object.values(window.allData).forEach(sheetData => {
-            if (sheetData && typeof sheetData === 'object') {
-                Object.values(sheetData).forEach(row => {
-                    const c = (row && row['CONTRACTOR']) ? row['CONTRACTOR'].trim() : '';
-                    if (c) contractors.add(c);
-                });
-            }
+            Object.values(sheetData).forEach(row => {
+                const c = (row['CONTRACTOR'] || '').trim();
+                if (c) contractors.add(c);
+            });
         });
-    } else {
-        console.warn('allData not available');
     }
-
-    if (contractors.size === 0) {
-        sel.innerHTML = '<option value="">-- لا يوجد مقاولون --</option>';
-        return;
+    if (window.contractorMap) {
+        Object.keys(window.contractorMap).forEach(name => {
+            if (name.trim()) contractors.add(name.trim());
+        });
     }
-
-    // Sort and populate
-    [...contractors].sort((a, b) => a.localeCompare(b, 'ar')).forEach(name => {
+    [...contractors].sort((a,b) => a.localeCompare(b,'ar')).forEach(name => {
         const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name;
+        opt.value = name; opt.textContent = name;
         sel.appendChild(opt);
     });
-
-    if (currentVal && contractors.has(currentVal)) sel.value = currentVal;
+    if (currentVal) sel.value = currentVal;
 }
 
 function concfSyncContractor(val) {
@@ -633,7 +572,7 @@ async function concfSubmit() {
     }
 }
 
-// Expose all functions globally
+// expose functions globally
 window.openCompanyCashflowForm = openCompanyCashflowForm;
 window.closeCompanyCashflowForm = closeCompanyCashflowForm;
 window.ccfSubmit = ccfSubmit;
@@ -641,12 +580,14 @@ window.ccfUpdatePreview = ccfUpdatePreview;
 window.ccfLoadRowForEdit = ccfLoadRowForEdit;
 window.ccfReset = ccfReset;
 window.ccfOpenHistory = ccfOpenHistory;
-window.ccfRefreshStatementNo = ccfRefreshStatementNo;
 
 window.openContractorCashflowForm = openContractorCashflowForm;
+window.closeContractorCashflowForm = closeContractorCashflowForm;
 window.concfSubmit = concfSubmit;
 window.concfUpdatePreview = concfUpdatePreview;
 window.concfLoadRowForEdit = concfLoadRowForEdit;
 window.concfReset = concfReset;
 window.concfSyncContractor = concfSyncContractor;
-window.concfPopulateContractors = concfPopulateContractors;
+window.concfSyncContractorText = concfSyncContractorText;
+window.concfBuildHistory = concfBuildHistory;
+window.concfSetMode = concfSetMode;
