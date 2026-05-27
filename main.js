@@ -3331,7 +3331,7 @@ document.addEventListener('click', () => { closeReportsDropdown(); closeAddDropd
    COMPANY CASHFLOW FORM
    ==================================================== */
 
-const COMPANY_CF_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGIT6QiwUijkUXHo043WfYLm3GPT5FW592Npg4zo40vUGKXP9wJK1lHepvZxlgznp5/exec";
+const COMPANY_CF_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby7T1Enypbek34YeIakOztC3Oiv5CCQ3iYO3iNxy5TbP21itFkPEPLNwlgF5ihmVyUJng/exec";
 
 /* شيت ID للشركة — يُجلب منه آخر رقم مستخلص */
 const COMPANY_CF_SHEET_READ_ID  = "1HTV35zXKroQdPJJ0XDew5rFgLwRX73-16AbtI1IymYA";
