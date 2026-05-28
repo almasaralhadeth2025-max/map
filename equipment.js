@@ -4,7 +4,7 @@
    item_name, contractor, date, equipments[]
    ==================================================== */
 
-const EQ_FORM_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxn4DbJEjaqBwL04ypHFRKDXIkIxhlrHTR5wlk_5cfux22Ip051n3W03fOZzX7c_KkM/exec";
+const EQ_FORM_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzLGEfSw3NxKWoM4FZ8V0cdoGpBMABYvgmDeaZbTx8K_xQieAYppy3n_Kjq2G8l6I50/exec";
 
 // Known equipment types for autocomplete
 /* ── قائمة أنواع المعدات — تُحمَّل حصراً من categories.json (لا قيم افتراضية) ── */
@@ -445,6 +445,7 @@ function eqResetForm() {
     document.getElementById('eqf_contractor').value   = '';
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('eqf_date').value = today;
+    document.getElementById('eqf_done_qty').value = '';
     document.getElementById('eqf_equipments_container').innerHTML = '';
     eqFormEquipmentCount = 0;
     eqShowEmptyHint();
@@ -492,6 +493,7 @@ async function eqSubmitForm() {
     const item_name    = document.getElementById('eqf_item_name').value.trim();
     const contractor   = document.getElementById('eqf_contractor').value.trim();
     const date         = document.getElementById('eqf_date').value.trim();
+    const done_qty     = parseFloat(document.getElementById('eqf_done_qty').value) || 0;
 
     // Validation
     if (!element_name) { eqShowFeedback('❌ يرجى اختيار أو إدخال اسم العنصر', 'error'); return; }
@@ -511,7 +513,7 @@ async function eqSubmitForm() {
     btn.textContent = '⏳ جاري الحفظ...';
     eqShowFeedback('⏳ جاري إرسال البيانات...', 'loading');
 
-    const payload = { element_id, element_name, item_name, contractor, date, equipments };
+    const payload = { element_id, element_name, item_name, contractor, date, done_qty, equipments };
 
     try {
         const r = await fetch(EQ_FORM_SCRIPT_URL, {
@@ -1111,6 +1113,3 @@ function importEquipmentTypesFromCSV() {
     area.value = '';
     showAlert(`✅ تمت إضافة ${newOnes.length} نوع جديد`, 'success');
 }
-
-
-
