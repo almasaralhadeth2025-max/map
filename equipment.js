@@ -509,94 +509,25 @@ async function eqSubmitForm() {
         return;
     }
 
-    // Disable submit button
-    const btn = document.getElementById('eqf_submit_btn');
-    btn.disabled = true;
-    btn.textContent = '⏳ جاري الجلب...';
-    eqShowFeedback('⏳ جاري جلب رابط السكريبت من الشيت...', 'loading');
+    // ── جيب رابط السكريبت من بيانات البند المحفوظة في categories ──
+    const bandSub = categories
+        ? categories.flatMap(c => c.subitems).find(s => s.sheetId === band_sheet)
+        : null;
+    const scriptUrl = (bandSub && bandSub.scriptUrl) ? bandSub.scriptUrl.trim() : '';
 
-    // ── جيب URL السكريبت من Sheet2 A1 ──
-    // الاستراتيجية:
-    // 1. جيب HTML الشيت واستخرج منه كل الـ gids مع أسمائها
-    // 2. ابحث عن Sheet2 بالاسم، وإلا جرّب كل الـ gids
-    // 3. أول sheet فيها A1 = رابط Apps Script → استخدمه
-    let scriptUrl = '';
-    try {
-        // ── الخطوة 1: استخرج كل الـ gids من HTML الشيت ──
-        let orderedGids = [];
-        try {
-            const htmlUrl = `https://docs.google.com/spreadsheets/d/${band_sheet}/edit`;
-            const htmlRes = await fetch(htmlUrl);
-            if (htmlRes.ok) {
-                const html = await htmlRes.text();
-                // Google Sheets يحط أسماء الـ sheets وgids في الـ HTML
-                // مثال: "gid":123456789  أو  gid=123456789
-                const gidMatches = [...html.matchAll(/"gid":(\d+)/g)];
-                const nameGidMatches = [...html.matchAll(/"name":"([^"]+)","id":"([^"]+)"/g)];
-
-                // جرّب نستخرج الـ gid بتاع Sheet2 تحديداً
-                // البحث في النص عن Sheet2 أو ورقة2 وأقرب gid ليها
-                const sheet2Regex = /gid[=:](\d+)[^}]*?"[^"]*(?:sheet2|ورقة\s*2|sheet\s*2)[^"]*"/gi;
-                const reverseRegex = /"[^"]*(?:sheet2|ورقة\s*2|sheet\s*2)[^"]*"[^}]*?gid[=:](\d+)/gi;
-
-                let sheet2Gid = null;
-
-                // طريقة أبسط: ابحث عن كل الـ gids بالترتيب
-                const allGids = [...html.matchAll(/[?&]gid=(\d+)/g)]
-                    .map(m => m[1])
-                    .filter((v, i, a) => a.indexOf(v) === i); // unique
-
-                // أضف الـ gid التاني بالترتيب كأرجح مكان لـ Sheet2
-                if (allGids.length >= 2) sheet2Gid = allGids[1];
-
-                // رتّب: Sheet2 Gid أول، ثم باقي الـ gids، ثم أرقام ثابتة كـ fallback
-                if (sheet2Gid) orderedGids.push(sheet2Gid);
-                allGids.forEach(g => { if (g !== sheet2Gid) orderedGids.push(g); });
-            }
-        } catch(_) {}
-
-        // أضف fallback أرقام ثابتة في النهاية
-        ['0','1','2','3','4','5','6','7','8','9'].forEach(g => {
-            if (!orderedGids.includes(g)) orderedGids.push(g);
-        });
-
-        // ── الخطوة 2: جرّب كل gid ──
-        let found = false;
-        for (const gid of orderedGids) {
-            try {
-                const tryUrl = `https://docs.google.com/spreadsheets/d/${band_sheet}/export?format=csv&gid=${gid}`;
-                const tryRes = await fetch(tryUrl);
-                if (!tryRes.ok) continue;
-                const tryCsv = await tryRes.text();
-                if (tryCsv.trim().startsWith('<')) continue; // HTML = مش صح
-
-                const firstLine = tryCsv.split('\n')[0] || '';
-                const cellA1    = firstLine.split(',')[0].replace(/^"|"$/g, '').trim();
-
-                if (cellA1.startsWith('https://script.google.com')) {
-                    scriptUrl = cellA1;
-                    found = true;
-                    break;
-                }
-            } catch(_) { continue; }
-        }
-
-        if (!found || !scriptUrl) {
-            throw new Error(
-                'لم يتم العثور على رابط السكريبت — تأكد من:\n' +
-                '1. الشيت مشارك للعموم (Anyone with link → Viewer)\n' +
-                '2. رابط Apps Script موجود في الخلية A1 في Sheet2\n' +
-                '3. الرابط يبدأ بـ https://script.google.com'
-            );
-        }
-    } catch (fetchErr) {
-        eqShowFeedback('❌ ' + fetchErr.message, 'error');
-        btn.disabled    = false;
-        btn.textContent = '💾 حفظ في السجل';
+    if (!scriptUrl) {
+        eqShowFeedback(
+            '❌ لم يتم تعيين رابط السكريبت لهذا البند — افتح الإعدادات → دبل كليك على البند الفرعي وأضف رابط Apps Script',
+            'error'
+        );
         return;
     }
 
+    // Disable submit button
+    const btn = document.getElementById('eqf_submit_btn');
+    btn.disabled = true;
     btn.textContent = '⏳ جاري الحفظ...';
+    eqShowFeedback('⏳ جاري إرسال البيانات...', 'loading');
     eqShowFeedback('⏳ جاري إرسال البيانات...', 'loading');
 
     const payload = { element_id, element_name, item_name, contractor, date, done_qty, equipments };
