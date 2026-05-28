@@ -67,6 +67,10 @@ function _fmtDate(val) {
     const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (iso) return `${iso[3]}-${iso[2]}-${iso[1]}`;
 
+    // لو بصيغة DD-MM-YYYY (محفوظ مسبقاً بالصيغة الصحيحة)
+    const dmy2 = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (dmy2) return s;
+
     // لو بصيغة DD/MM/YYYY
     const dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
     if (dmy) return `${dmy[1].padStart(2,'0')}-${dmy[2].padStart(2,'0')}-${dmy[3]}`;
@@ -82,6 +86,17 @@ function _fmtDate(val) {
 
     // fallback
     return s;
+}
+
+/* ── تحويل التاريخ من YYYY-MM-DD إلى DD-MM-YYYY للحفظ في الشيت ── */
+function _dateToStorage(val) {
+    if (!val) return '';
+    const s = String(val).trim();
+    // YYYY-MM-DD → DD-MM-YYYY
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (iso) return `${iso[3]}-${iso[2]}-${iso[1]}`;
+    // لو مش ISO، استخدم _fmtDate
+    return _fmtDate(s);
 }
 
 
@@ -283,7 +298,7 @@ async function ccfSubmit() {
         await _cfPost(CCF_URL, {
             action:       isEdit ? 'update' : 'insert',
             rowIndex:     isEdit ? (_ccfEditing['__rowIndex'] || null) : null,
-            statement_no, date, amount, status, notes,
+            statement_no, date: _dateToStorage(date), amount, status, notes,
         });
 
         const msg = isEdit ? '✅ تم تحديث المستخلص!' : '✅ تم حفظ المستخلص!';
@@ -574,7 +589,7 @@ async function concfSubmit() {
         await _cfPost(CONCF_URL, {
             action:       isEdit ? 'update' : 'insert',
             rowIndex:     isEdit ? (_concfEditing['__rowIndex'] || null) : null,
-            contractor, statement_no, date,
+            contractor, statement_no, date: _dateToStorage(date),
             total: Number(total),
             spent: Number(spent),
             notes,
