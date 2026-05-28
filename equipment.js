@@ -4,7 +4,6 @@
    item_name, contractor, date, equipments[]
    ==================================================== */
 
-const EQ_FORM_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxn4DbJEjaqBwL04ypHFRKDXIkIxhlrHTR5wlk_5cfux22Ip051n3W03fOZzX7c_KkM/exec";
 
 // Known equipment types for autocomplete
 /* ── قائمة أنواع المعدات — تُحمَّل حصراً من categories.json (لا قيم افتراضية) ── */
@@ -517,19 +516,37 @@ async function eqSubmitForm() {
     eqShowFeedback('⏳ جاري جلب رابط السكريبت من الشيت...', 'loading');
 
     // ── جيب URL السكريبت من Sheet2 A1 ──
+    // الاستراتيجية: جرّب gid=0,1,2,3 وافتح الـ sheet اللي A1 فيها رابط Apps Script
     let scriptUrl = '';
     try {
-        // gid=1 هو الـ default لـ Sheet2 — لو اختلف عندك غيّره
-        const sheet2Url = `https://docs.google.com/spreadsheets/d/${band_sheet}/export?format=csv&gid=1`;
-        const r2 = await fetch(sheet2Url);
-        if (!r2.ok) throw new Error('تعذر فتح Sheet2 (HTTP ' + r2.status + ')');
-        const csv2 = await r2.text();
-        if (csv2.trim().startsWith('<')) throw new Error('Sheet2 غير مشاركة للعموم — فعّل المشاركة العامة');
-        // A1 = أول خلية في أول سطر
-        const firstLine = csv2.split('\n')[0] || '';
-        scriptUrl = firstLine.split(',')[0].replace(/^"|"$/g, '').trim();
-        if (!scriptUrl || !scriptUrl.startsWith('https://')) {
-            throw new Error('الخلية A1 في Sheet2 لا تحتوي على رابط صحيح');
+        const gidsToTry = ['0', '1', '2', '3', '4', '5'];
+        let found = false;
+
+        for (const gid of gidsToTry) {
+            try {
+                const tryUrl = `https://docs.google.com/spreadsheets/d/${band_sheet}/export?format=csv&gid=${gid}`;
+                const tryRes = await fetch(tryUrl);
+                if (!tryRes.ok) continue;
+                const tryCsv = await tryRes.text();
+                if (tryCsv.trim().startsWith('<')) continue;
+
+                const firstLine = tryCsv.split('\n')[0] || '';
+                const cellA1    = firstLine.split(',')[0].replace(/^"|"$/g, '').trim();
+
+                if (cellA1.startsWith('https://script.google.com')) {
+                    scriptUrl = cellA1;
+                    found = true;
+                    break;
+                }
+            } catch(_) { continue; }
+        }
+
+        if (!found || !scriptUrl) {
+            throw new Error(
+                'لم يتم العثور على رابط السكريبت — تأكد أن:\n' +
+                '1. الشيت مشارك للعموم (Anyone with link)\n' +
+                '2. رابط Apps Script موجود في الخلية A1 في Sheet2'
+            );
         }
     } catch (fetchErr) {
         eqShowFeedback('❌ ' + fetchErr.message, 'error');
