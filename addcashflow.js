@@ -99,6 +99,28 @@ function _dateToStorage(val) {
     return _fmtDate(s);
 }
 
+/* ── تحويل أي صيغة تاريخ إلى YYYY-MM-DD لاستخدامها في input[type=date] ── */
+function _dateToInputVal(val) {
+    if (!val) return '';
+    const s = String(val).trim();
+    // لو بالفعل YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    // DD-MM-YYYY → YYYY-MM-DD
+    const dmy = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (dmy) return `${dmy[3]}-${dmy[2]}-${dmy[1]}`;
+    // DD/MM/YYYY → YYYY-MM-DD
+    const dmy2 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (dmy2) return `${dmy2[3]}-${dmy2[2].padStart(2,'0')}-${dmy2[1].padStart(2,'0')}`;
+    // صيغة JS Date string
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+        const day   = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        return `${d.getFullYear()}-${month}-${day}`;
+    }
+    return s;
+}
+
 
 
 async function openCompanyCashflowForm() {
@@ -181,7 +203,7 @@ function ccfLoadRowForEdit(rowJson) {
     _ccfSetMode('edit');
 
     document.getElementById('ccf_statement_no').value = row['رقم المستخلص'] || '';
-    document.getElementById('ccf_date').value         = row['التاريخ']       || '';
+    document.getElementById('ccf_date').value         = _dateToInputVal(row['التاريخ'] || '');
     document.getElementById('ccf_amount').value       = String(row['القيمة'] || '').replace(/,/g, '');
     document.getElementById('ccf_notes').value        = row['الملاحظات']     || '';
 
@@ -476,7 +498,7 @@ function concfLoadRowForEdit(rowJson) {
     const noInp = document.getElementById('concf_statement_no');
     if (noInp) { noInp.value = row['رقم المستخلص'] || ''; noInp.style.borderColor = 'rgba(245,200,66,0.6)'; }
 
-    document.getElementById('concf_date').value  = row['التاريخ']    || '';
+    document.getElementById('concf_date').value  = _dateToInputVal(row['التاريخ'] || '');
     document.getElementById('concf_total').value = String(row['الإجمالي'] || '').replace(/,/g, '');
     document.getElementById('concf_spent').value = String(row['المنصرف']  || '').replace(/,/g, '');
     document.getElementById('concf_notes').value = row['الملاحظات']  || '';
