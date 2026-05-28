@@ -190,19 +190,7 @@ function _ccfBuildHistory(rows) {
     panel.style.display = 'block';
 }
 
-async function ccfOpenHistory() {
-    const panel = document.getElementById('ccf_history_panel');
-    if (panel && panel.style.display === 'block') { panel.style.display = 'none'; return; }
-    const list = document.getElementById('ccf_history_list');
-    if (list) list.innerHTML = '<div style="padding:14px;text-align:center;color:rgba(255,255,255,0.4);font-family:Cairo,sans-serif;font-size:12px;">⏳ جاري التحميل...</div>';
-    if (panel) panel.style.display = 'block';
-    try {
-        const { rows } = await _cfGet(CCF_URL);
-        _ccfBuildHistory(rows);
-    } catch (e) {
-        if (list) list.innerHTML = '<div style="padding:14px;text-align:center;color:#ff8a80;font-family:Cairo,sans-serif;font-size:12px;">❌ تعذر التحميل</div>';
-    }
-}
+
 
 function _ccfShowFeedback(msg, type) {
     const fb = document.getElementById('ccf_feedback');
@@ -542,7 +530,6 @@ window.ccfSubmit                   = ccfSubmit;
 window.ccfUpdatePreview            = ccfUpdatePreview;
 window.ccfLoadRowForEdit           = ccfLoadRowForEdit;
 window.ccfReset                    = ccfReset;
-window.ccfOpenHistory              = ccfOpenHistory;
 
 window.openContractorCashflowForm  = openContractorCashflowForm;
 window.closeContractorCashflowForm = closeContractorCashflowForm;
