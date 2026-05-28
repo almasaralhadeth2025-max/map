@@ -4,7 +4,7 @@
    item_name, contractor, date, equipments[]
    ==================================================== */
 
-const EQ_FORM_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzLGEfSw3NxKWoM4FZ8V0cdoGpBMABYvgmDeaZbTx8K_xQieAYppy3n_Kjq2G8l6I50/exec";
+const EQ_FORM_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxn4DbJEjaqBwL04ypHFRKDXIkIxhlrHTR5wlk_5cfux22Ip051n3W03fOZzX7c_KkM/exec";
 
 // Known equipment types for autocomplete
 /* ── قائمة أنواع المعدات — تُحمَّل حصراً من categories.json (لا قيم افتراضية) ── */
@@ -348,7 +348,7 @@ function eqRenderBandPicker(q) {
             const numBadge = sub.number
                 ? '<span style="font-size:9px;font-weight:700;color:rgba(106,45,145,0.8);background:rgba(106,45,145,0.12);padding:2px 7px;border-radius:4px;border:1px solid rgba(106,45,145,0.2);margin-left:6px;flex-shrink:0;">' + sub.number + '</span>'
                 : '';
-            html += '<div onclick="eqSelectBand(\'' + sub.name.replace(/'/g, "\\'") + '\')" ' +
+            html += '<div onclick="eqSelectBand(\'' + sub.name.replace(/'/g, "\\'") + '\',\'' + (sub.sheetId || '') + '\')" ' +
                 'style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:9px;cursor:pointer;border:1.5px solid transparent;transition:all 0.15s;margin-bottom:3px;background:rgba(255,255,255,0.03);" ' +
                 'onmouseover="this.style.background=\'rgba(106,45,145,0.12)\';this.style.borderColor=\'rgba(106,45,145,0.35)\'" ' +
                 'onmouseout="this.style.background=\'rgba(255,255,255,0.03)\';this.style.borderColor=\'transparent\'">' +
@@ -368,8 +368,9 @@ function eqRenderBandPicker(q) {
     list.innerHTML = html;
 }
 
-function eqSelectBand(name) {
-    document.getElementById('eqf_item_name').value = name;
+function eqSelectBand(name, sheetId) {
+    document.getElementById('eqf_item_name').value  = name;
+    document.getElementById('eqf_band_sheet').value = sheetId || '';
     const lbl = document.getElementById('eqf_band_label');
     lbl.textContent = name;
     lbl.style.color = 'rgba(255,255,255,0.9)';
@@ -438,6 +439,7 @@ function eqResetForm() {
     document.getElementById('eqf_element_info').style.display = 'none';
     document.getElementById('eqf_element_dropdown').style.display = 'none';
     document.getElementById('eqf_item_name').value   = '';
+    document.getElementById('eqf_band_sheet').value  = '';
     const lbl = document.getElementById('eqf_band_label');
     if (lbl) { lbl.textContent = '-- اختر البند --'; lbl.style.color = ''; }
     const btn = document.getElementById('eqf_band_btn');
@@ -445,7 +447,6 @@ function eqResetForm() {
     document.getElementById('eqf_contractor').value   = '';
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('eqf_date').value = today;
-    document.getElementById('eqf_done_qty').value = '';
     document.getElementById('eqf_equipments_container').innerHTML = '';
     eqFormEquipmentCount = 0;
     eqShowEmptyHint();
@@ -494,12 +495,14 @@ async function eqSubmitForm() {
     const contractor   = document.getElementById('eqf_contractor').value.trim();
     const date         = document.getElementById('eqf_date').value.trim();
     const done_qty     = parseFloat(document.getElementById('eqf_done_qty').value) || 0;
+    const band_sheet   = document.getElementById('eqf_band_sheet').value.trim();
 
     // Validation
     if (!element_name) { eqShowFeedback('❌ يرجى اختيار أو إدخال اسم العنصر', 'error'); return; }
     if (!item_name)    { eqShowFeedback('❌ يرجى اختيار البند', 'error'); return; }
     if (!contractor)   { eqShowFeedback('❌ يرجى اختيار المقاول', 'error'); return; }
     if (!date)         { eqShowFeedback('❌ يرجى اختيار التاريخ', 'error'); return; }
+    if (!band_sheet)   { eqShowFeedback('❌ البند المختار ليس له شيت مرتبط — راجع الإعدادات', 'error'); return; }
 
     const equipments = eqCollectEquipments();
     if (!equipments.length) {
@@ -510,13 +513,38 @@ async function eqSubmitForm() {
     // Disable submit button
     const btn = document.getElementById('eqf_submit_btn');
     btn.disabled = true;
+    btn.textContent = '⏳ جاري الجلب...';
+    eqShowFeedback('⏳ جاري جلب رابط السكريبت من الشيت...', 'loading');
+
+    // ── جيب URL السكريبت من Sheet2 A1 ──
+    let scriptUrl = '';
+    try {
+        // gid=1 هو الـ default لـ Sheet2 — لو اختلف عندك غيّره
+        const sheet2Url = `https://docs.google.com/spreadsheets/d/${band_sheet}/export?format=csv&gid=1`;
+        const r2 = await fetch(sheet2Url);
+        if (!r2.ok) throw new Error('تعذر فتح Sheet2 (HTTP ' + r2.status + ')');
+        const csv2 = await r2.text();
+        if (csv2.trim().startsWith('<')) throw new Error('Sheet2 غير مشاركة للعموم — فعّل المشاركة العامة');
+        // A1 = أول خلية في أول سطر
+        const firstLine = csv2.split('\n')[0] || '';
+        scriptUrl = firstLine.split(',')[0].replace(/^"|"$/g, '').trim();
+        if (!scriptUrl || !scriptUrl.startsWith('https://')) {
+            throw new Error('الخلية A1 في Sheet2 لا تحتوي على رابط صحيح');
+        }
+    } catch (fetchErr) {
+        eqShowFeedback('❌ ' + fetchErr.message, 'error');
+        btn.disabled    = false;
+        btn.textContent = '💾 حفظ في السجل';
+        return;
+    }
+
     btn.textContent = '⏳ جاري الحفظ...';
     eqShowFeedback('⏳ جاري إرسال البيانات...', 'loading');
 
     const payload = { element_id, element_name, item_name, contractor, date, done_qty, equipments };
 
     try {
-        const r = await fetch(EQ_FORM_SCRIPT_URL, {
+        const r = await fetch(scriptUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify(payload),
@@ -530,7 +558,6 @@ async function eqSubmitForm() {
         if (resp.status === 'success' || r.ok) {
             eqShowFeedback('✅ تم حفظ بيانات المعدات بنجاح في السجل!', 'success');
             showAlert('✅ تم تسجيل المعدات بنجاح', 'success');
-            // Auto-reset after success
             setTimeout(() => eqResetForm(), 2500);
         } else {
             throw new Error(resp.message || 'فشل الحفظ');
@@ -540,7 +567,7 @@ async function eqSubmitForm() {
         console.error('Equipment form submit error:', e);
         eqShowFeedback('❌ تعذر الحفظ: ' + (e.message || 'خطأ في الاتصال') + ' — تأكد من إعدادات Apps Script', 'error');
     } finally {
-        btn.disabled = false;
+        btn.disabled    = false;
         btn.textContent = '💾 حفظ في السجل';
     }
 }
