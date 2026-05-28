@@ -58,9 +58,17 @@ function _nextNo(rows, colName) {
     return String(max + 1).padStart(3, '0');
 }
 
-/* =====================================================
-   COMPANY CASHFLOW
-   ===================================================== */
+/* ── تنسيق التاريخ: يوم/شهر/سنة ── */
+function _fmtDate(val) {
+    if (!val) return '—';
+    // لو بصيغة YYYY-MM-DD
+    const m = String(val).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+    // لو بصيغة DD/MM/YYYY أو أي شكل تاني → ارجعه كما هو
+    return val;
+}
+
+
 
 async function openCompanyCashflowForm() {
     openModal('companyCashflowModal');
@@ -200,7 +208,9 @@ function _ccfBuildHistory(rows) {
         const enc = JSON.stringify(row).replace(/"/g, '&quot;');
         const tds = allKeys.map(k => {
             let val = row[k] !== undefined ? row[k] : '';
-            if (k === 'القيمة') {
+            if (k === 'التاريخ') {
+                val = _fmtDate(val);
+            } else if (k === 'القيمة') {
                 const n = parseFloat(String(val).replace(/,/g, ''));
                 val = !isNaN(n) ? n.toLocaleString('en-US', { maximumFractionDigits: 2 }) : (val || '—');
             }
@@ -213,19 +223,8 @@ function _ccfBuildHistory(rows) {
     panel.style.display = 'block';
 }
 
-async function ccfOpenHistory() {
-    const panel = document.getElementById('ccf_history_panel');
-    if (panel && panel.style.display === 'block') { panel.style.display = 'none'; return; }
-    const list = document.getElementById('ccf_history_list');
-    if (list) list.innerHTML = '<div style="padding:14px;text-align:center;color:rgba(255,255,255,0.4);font-family:Cairo,sans-serif;font-size:12px;">⏳ جاري التحميل...</div>';
-    if (panel) panel.style.display = 'block';
-    try {
-        const { rows } = await _cfGet(CCF_URL);
-        _ccfBuildHistory(rows);
-    } catch (e) {
-        if (list) list.innerHTML = '<div style="padding:14px;text-align:center;color:#ff8a80;font-family:Cairo,sans-serif;font-size:12px;">❌ تعذر التحميل</div>';
-    }
-}
+
+
 
 function _ccfShowFeedback(msg, type) {
     const fb = document.getElementById('ccf_feedback');
@@ -488,13 +487,12 @@ function _concfBuildHistory(rows, filterContractor) {
         return 'rgba(255,255,255,0.75)';
     };
 
+    const numKeys = new Set(['الإجمالي', 'المنصرف']);
+
     /* رأس الجدول */
     const thCells = allKeys.map(k =>
         `<th style="padding:9px 12px;text-align:right;font-size:10px;font-weight:800;color:${colColor(k)};white-space:nowrap;letter-spacing:.3px;border-bottom:1px solid rgba(255,255,255,0.1);font-family:Cairo,sans-serif;">${k}</th>`
     ).join('') + `<th style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.1);"></th>`;
-
-    /* الأعمدة الرقمية */
-    const numKeys = new Set(['الإجمالي', 'المنصرف']);
 
     /* صفوف الجدول */
     const trRows = [...display].reverse().map((row, i) => {
@@ -502,7 +500,9 @@ function _concfBuildHistory(rows, filterContractor) {
         const enc = JSON.stringify(row).replace(/"/g, '&quot;');
         const tds = allKeys.map(k => {
             let val = row[k] !== undefined ? row[k] : '';
-            if (numKeys.has(k)) {
+            if (k === 'التاريخ') {
+                val = _fmtDate(val);
+            } else if (numKeys.has(k)) {
                 const n = parseFloat(String(val).replace(/,/g, ''));
                 val = !isNaN(n) ? n.toLocaleString('en-US', { maximumFractionDigits: 2 }) : (val || '—');
             }
@@ -592,7 +592,6 @@ window.ccfSubmit                   = ccfSubmit;
 window.ccfUpdatePreview            = ccfUpdatePreview;
 window.ccfLoadRowForEdit           = ccfLoadRowForEdit;
 window.ccfReset                    = ccfReset;
-window.ccfOpenHistory              = ccfOpenHistory;
 
 window.openContractorCashflowForm  = openContractorCashflowForm;
 window.closeContractorCashflowForm = closeContractorCashflowForm;
