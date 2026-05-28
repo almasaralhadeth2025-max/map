@@ -58,67 +58,57 @@ function _nextNo(rows, colName) {
     return String(max + 1).padStart(3, '0');
 }
 
-/* ── تنسيق التاريخ: DD-MM-YYYY ── */
-function _fmtDate(val) {
-    if (!val) return '—';
-    const s = String(val).trim();
-
-    // لو بصيغة YYYY-MM-DD
-    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (iso) return `${iso[3]}-${iso[2]}-${iso[1]}`;
-
-    // لو بصيغة DD-MM-YYYY (محفوظ مسبقاً بالصيغة الصحيحة)
-    const dmy2 = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
-    if (dmy2) return s;
-
-    // لو بصيغة DD/MM/YYYY
-    const dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-    if (dmy) return `${dmy[1].padStart(2,'0')}-${dmy[2].padStart(2,'0')}-${dmy[3]}`;
-
-    // لو بصيغة نصية مثل "Thu May 14 2026 ..." أو أي صيغة JavaScript Date
-    const d = new Date(s);
-    if (!isNaN(d.getTime())) {
-        const day   = String(d.getDate()).padStart(2, '0');
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const year  = d.getFullYear();
-        return `${day}-${month}-${year}`;
+/* ── مساعد داخلي: يحوّل أي قيمة تاريخ إلى Date object ── */
+function _parseAnyDate(val) {
+    if (!val && val !== 0) return null;
+    if (typeof val === 'number') {
+        if (val < 100000) {
+            const d = new Date(Date.UTC(1899, 11, 30) + val * 86400000);
+            return isNaN(d.getTime()) ? null : d;
+        }
+        const d = new Date(val);
+        return isNaN(d.getTime()) ? null : d;
     }
-
-    // fallback
-    return s;
-}
-
-/* ── تحويل التاريخ من YYYY-MM-DD إلى DD-MM-YYYY للحفظ في الشيت ── */
-function _dateToStorage(val) {
-    if (!val) return '';
     const s = String(val).trim();
-    // YYYY-MM-DD → DD-MM-YYYY
-    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (iso) return `${iso[3]}-${iso[2]}-${iso[1]}`;
-    // لو مش ISO، استخدم _fmtDate
-    return _fmtDate(s);
-}
-
-/* ── تحويل أي صيغة تاريخ إلى YYYY-MM-DD لاستخدامها في input[type=date] ── */
-function _dateToInputVal(val) {
-    if (!val) return '';
-    const s = String(val).trim();
-    // لو بالفعل YYYY-MM-DD
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-    // DD-MM-YYYY → YYYY-MM-DD
+    if (!s) return null;
     const dmy = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
-    if (dmy) return `${dmy[3]}-${dmy[2]}-${dmy[1]}`;
-    // DD/MM/YYYY → YYYY-MM-DD
+    if (dmy) return new Date(`${dmy[3]}-${dmy[2]}-${dmy[1]}`);
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(s);
     const dmy2 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-    if (dmy2) return `${dmy2[3]}-${dmy2[2].padStart(2,'0')}-${dmy2[1].padStart(2,'0')}`;
-    // صيغة JS Date string
+    if (dmy2) return new Date(`${dmy2[3]}-${dmy2[2].padStart(2,'0')}-${dmy2[1].padStart(2,'0')}`);
     const d = new Date(s);
-    if (!isNaN(d.getTime())) {
-        const day   = String(d.getDate()).padStart(2, '0');
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        return `${d.getFullYear()}-${month}-${day}`;
-    }
-    return s;
+    return isNaN(d.getTime()) ? null : d;
+}
+
+/* ── تنسيق التاريخ: DD-MM-YYYY للعرض ── */
+function _fmtDate(val) {
+    if (!val && val !== 0) return '—';
+    const d = _parseAnyDate(val);
+    if (!d) return String(val);
+    const day   = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year  = d.getFullYear();
+    return `${day}-${month}-${year}`;
+}
+
+/* ── تحويل أي تاريخ إلى DD-MM-YYYY للحفظ في الشيت ── */
+function _dateToStorage(val) {
+    if (!val && val !== 0) return '';
+    const d = _parseAnyDate(val);
+    if (!d) return String(val);
+    const day   = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    return `${day}-${month}-${d.getFullYear()}`;
+}
+
+/* ── تحويل أي تاريخ إلى YYYY-MM-DD لـ input[type=date] ── */
+function _dateToInputVal(val) {
+    if (!val && val !== 0) return '';
+    const d = _parseAnyDate(val);
+    if (!d) return '';
+    const day   = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    return `${d.getFullYear()}-${month}-${day}`;
 }
 
 
