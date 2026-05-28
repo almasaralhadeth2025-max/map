@@ -347,7 +347,9 @@ function eqRenderBandPicker(q) {
             const numBadge = sub.number
                 ? '<span style="font-size:9px;font-weight:700;color:rgba(106,45,145,0.8);background:rgba(106,45,145,0.12);padding:2px 7px;border-radius:4px;border:1px solid rgba(106,45,145,0.2);margin-left:6px;flex-shrink:0;">' + sub.number + '</span>'
                 : '';
-            html += '<div onclick="eqSelectBand(\'' + sub.name.replace(/'/g, "\\'") + '\',\'' + (sub.sheetId || '') + '\')" ' +
+            const safeCatName = cat.name.replace(/'/g, "\\'");
+            const safeCatId   = (cat.id || '').replace(/'/g, "\\'");
+            html += '<div onclick="eqSelectBand(\'' + sub.name.replace(/'/g, "\\'") + '\',\'' + (sub.sheetId || '') + '\',\'' + safeCatName + '\',\'' + safeCatId + '\')" ' +
                 'style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:9px;cursor:pointer;border:1.5px solid transparent;transition:all 0.15s;margin-bottom:3px;background:rgba(255,255,255,0.03);" ' +
                 'onmouseover="this.style.background=\'rgba(106,45,145,0.12)\';this.style.borderColor=\'rgba(106,45,145,0.35)\'" ' +
                 'onmouseout="this.style.background=\'rgba(255,255,255,0.03)\';this.style.borderColor=\'transparent\'">' +
@@ -367,13 +369,25 @@ function eqRenderBandPicker(q) {
     list.innerHTML = html;
 }
 
-function eqSelectBand(name, sheetId) {
+function eqSelectBand(name, sheetId, catName, catId) {
     document.getElementById('eqf_item_name').value  = name;
     document.getElementById('eqf_band_sheet').value = sheetId || '';
     const lbl = document.getElementById('eqf_band_label');
     lbl.textContent = name;
     lbl.style.color = 'rgba(255,255,255,0.9)';
     document.getElementById('eqf_band_btn').style.borderColor = 'rgba(106,45,145,0.5)';
+
+    // ── البند الرئيسي ──
+    document.getElementById('eqf_cat_name').value = catName || '';
+    document.getElementById('eqf_cat_id').value   = catId   || '';
+
+    // ── المجموعة (من similarGroups) ──
+    const sub = (categories || []).flatMap(c => c.subitems)
+        .find(s => s.sheetId === sheetId && s.name === name);
+    const group = sub ? getGroupForSub(sub.id) : null;
+    document.getElementById('eqf_group_name').value = group ? (group.name || '—') : '—';
+    document.getElementById('eqf_group_id').value   = group ? (group.id   || '')  : '';
+
     eqCloseBandPicker();
 }
 
@@ -439,6 +453,10 @@ function eqResetForm() {
     document.getElementById('eqf_element_dropdown').style.display = 'none';
     document.getElementById('eqf_item_name').value   = '';
     document.getElementById('eqf_band_sheet').value  = '';
+    document.getElementById('eqf_cat_name').value    = '';
+    document.getElementById('eqf_cat_id').value      = '';
+    document.getElementById('eqf_group_name').value  = '';
+    document.getElementById('eqf_group_id').value    = '';
     const lbl = document.getElementById('eqf_band_label');
     if (lbl) { lbl.textContent = '-- اختر البند --'; lbl.style.color = ''; }
     const btn = document.getElementById('eqf_band_btn');
@@ -446,6 +464,8 @@ function eqResetForm() {
     document.getElementById('eqf_contractor').value   = '';
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('eqf_date').value = today;
+    const doneQty = document.getElementById('eqf_done_qty');
+    if (doneQty) doneQty.value = '';
     document.getElementById('eqf_equipments_container').innerHTML = '';
     eqFormEquipmentCount = 0;
     eqShowEmptyHint();
@@ -491,6 +511,8 @@ async function eqSubmitForm() {
     const element_id   = document.getElementById('eqf_element_id').value.trim();
     const element_name = document.getElementById('eqf_element_name').value.trim();
     const item_name    = document.getElementById('eqf_item_name').value.trim();
+    const cat_name     = document.getElementById('eqf_cat_name').value.trim();
+    const group_name   = document.getElementById('eqf_group_name').value.trim();
     const contractor   = document.getElementById('eqf_contractor').value.trim();
     const date         = document.getElementById('eqf_date').value.trim();
     const done_qty     = parseFloat(document.getElementById('eqf_done_qty').value) || 0;
@@ -509,28 +531,97 @@ async function eqSubmitForm() {
         return;
     }
 
-    // ── جيب رابط السكريبت من بيانات البند المحفوظة في categories ──
-    const bandSub = categories
-        ? categories.flatMap(c => c.subitems).find(s => s.sheetId === band_sheet)
-        : null;
-    const scriptUrl = (bandSub && bandSub.scriptUrl) ? bandSub.scriptUrl.trim() : '';
-
-    if (!scriptUrl) {
-        eqShowFeedback(
-            '❌ لم يتم تعيين رابط السكريبت لهذا البند — افتح الإعدادات → دبل كليك على البند الفرعي وأضف رابط Apps Script',
-            'error'
-        );
-        return;
-    }
-
     // Disable submit button
     const btn = document.getElementById('eqf_submit_btn');
     btn.disabled = true;
+    btn.textContent = '⏳ جاري الجلب...';
+    eqShowFeedback('⏳ جاري جلب رابط السكريبت من الشيت...', 'loading');
+
+    // ── جيب URL السكريبت من Sheet2 A1 ──
+    // الاستراتيجية:
+    // 1. جيب HTML الشيت واستخرج منه كل الـ gids مع أسمائها
+    // 2. ابحث عن Sheet2 بالاسم، وإلا جرّب كل الـ gids
+    // 3. أول sheet فيها A1 = رابط Apps Script → استخدمه
+    let scriptUrl = '';
+    try {
+        // ── الخطوة 1: استخرج كل الـ gids من HTML الشيت ──
+        let orderedGids = [];
+        try {
+            const htmlUrl = `https://docs.google.com/spreadsheets/d/${band_sheet}/edit`;
+            const htmlRes = await fetch(htmlUrl);
+            if (htmlRes.ok) {
+                const html = await htmlRes.text();
+                // Google Sheets يحط أسماء الـ sheets وgids في الـ HTML
+                // مثال: "gid":123456789  أو  gid=123456789
+                const gidMatches = [...html.matchAll(/"gid":(\d+)/g)];
+                const nameGidMatches = [...html.matchAll(/"name":"([^"]+)","id":"([^"]+)"/g)];
+
+                // جرّب نستخرج الـ gid بتاع Sheet2 تحديداً
+                // البحث في النص عن Sheet2 أو ورقة2 وأقرب gid ليها
+                const sheet2Regex = /gid[=:](\d+)[^}]*?"[^"]*(?:sheet2|ورقة\s*2|sheet\s*2)[^"]*"/gi;
+                const reverseRegex = /"[^"]*(?:sheet2|ورقة\s*2|sheet\s*2)[^"]*"[^}]*?gid[=:](\d+)/gi;
+
+                let sheet2Gid = null;
+
+                // طريقة أبسط: ابحث عن كل الـ gids بالترتيب
+                const allGids = [...html.matchAll(/[?&]gid=(\d+)/g)]
+                    .map(m => m[1])
+                    .filter((v, i, a) => a.indexOf(v) === i); // unique
+
+                // أضف الـ gid التاني بالترتيب كأرجح مكان لـ Sheet2
+                if (allGids.length >= 2) sheet2Gid = allGids[1];
+
+                // رتّب: Sheet2 Gid أول، ثم باقي الـ gids، ثم أرقام ثابتة كـ fallback
+                if (sheet2Gid) orderedGids.push(sheet2Gid);
+                allGids.forEach(g => { if (g !== sheet2Gid) orderedGids.push(g); });
+            }
+        } catch(_) {}
+
+        // أضف fallback أرقام ثابتة في النهاية
+        ['0','1','2','3','4','5','6','7','8','9'].forEach(g => {
+            if (!orderedGids.includes(g)) orderedGids.push(g);
+        });
+
+        // ── الخطوة 2: جرّب كل gid ──
+        let found = false;
+        for (const gid of orderedGids) {
+            try {
+                const tryUrl = `https://docs.google.com/spreadsheets/d/${band_sheet}/export?format=csv&gid=${gid}`;
+                const tryRes = await fetch(tryUrl);
+                if (!tryRes.ok) continue;
+                const tryCsv = await tryRes.text();
+                if (tryCsv.trim().startsWith('<')) continue; // HTML = مش صح
+
+                const firstLine = tryCsv.split('\n')[0] || '';
+                const cellA1    = firstLine.split(',')[0].replace(/^"|"$/g, '').trim();
+
+                if (cellA1.startsWith('https://script.google.com')) {
+                    scriptUrl = cellA1;
+                    found = true;
+                    break;
+                }
+            } catch(_) { continue; }
+        }
+
+        if (!found || !scriptUrl) {
+            throw new Error(
+                'لم يتم العثور على رابط السكريبت — تأكد من:\n' +
+                '1. الشيت مشارك للعموم (Anyone with link → Viewer)\n' +
+                '2. رابط Apps Script موجود في الخلية A1 في Sheet2\n' +
+                '3. الرابط يبدأ بـ https://script.google.com'
+            );
+        }
+    } catch (fetchErr) {
+        eqShowFeedback('❌ ' + fetchErr.message, 'error');
+        btn.disabled    = false;
+        btn.textContent = '💾 حفظ في السجل';
+        return;
+    }
+
     btn.textContent = '⏳ جاري الحفظ...';
     eqShowFeedback('⏳ جاري إرسال البيانات...', 'loading');
-    eqShowFeedback('⏳ جاري إرسال البيانات...', 'loading');
 
-    const payload = { element_id, element_name, item_name, contractor, date, done_qty, equipments };
+    const payload = { group_name, cat_name, element_id, element_name, item_name, contractor, date, done_qty, equipments };
 
     try {
         const r = await fetch(scriptUrl, {
