@@ -970,7 +970,6 @@
 
         <!-- Footer -->
         <div style="background:rgba(0,0,0,0.25);padding:14px 24px;display:flex;align-items:center;justify-content:flex-end;border-top:1px solid rgba(255,255,255,0.05);flex-shrink:0;gap:10px;">
-            <button onclick="ccfOpenHistory()" style="background:rgba(33,150,243,0.12);border:1px solid rgba(33,150,243,0.35);color:#5baddf;padding:9px 16px;border-radius:8px;font-size:12px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;transition:all 0.2s;">📋 استرجاع مستخلص</button>
             <button onclick="ccfSubmit()" id="ccf_submit_btn" style="background:linear-gradient(135deg,#2196f3,#1565c0);border:none;color:white;padding:11px 28px;border-radius:10px;font-size:14px;font-weight:900;font-family:'Cairo',sans-serif;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 16px rgba(33,150,243,0.3);" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">💾 حفظ في السجل</button>
         </div>
     </div>
@@ -1077,11 +1076,8 @@
         </div>
 
         <!-- Footer -->
-        <div style="background:rgba(0,0,0,0.25);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(255,255,255,0.05);flex-shrink:0;">
-            <div style="display:flex;gap:10px;align-items:center;">
-                <button onclick="if(_concfRowsCache){const sel=document.getElementById('concf_contractor_select');concfBuildHistory(_concfRowsCache,sel.value||undefined);document.getElementById('concf_history_panel').style.display='block';}" style="background:rgba(245,200,66,0.1);border:1px solid rgba(245,200,66,0.4);color:#f5c842;padding:9px 16px;border-radius:8px;font-size:12px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;transition:all 0.2s;">📋 استرجاع مستخلص</button>
-                <button onclick="concfSubmit()" id="concf_submit_btn" style="background:linear-gradient(135deg,#f5c842,#e8a800);border:none;color:#1a0a2e;padding:11px 28px;border-radius:10px;font-size:14px;font-weight:900;font-family:'Cairo',sans-serif;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 16px rgba(245,200,66,0.3);" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">💾 حفظ في السجل</button>
-            </div>
+        <div style="background:rgba(0,0,0,0.25);padding:14px 24px;display:flex;align-items:center;justify-content:flex-end;border-top:1px solid rgba(255,255,255,0.05);flex-shrink:0;">
+            <button onclick="concfSubmit()" id="concf_submit_btn" style="background:linear-gradient(135deg,#f5c842,#e8a800);border:none;color:#1a0a2e;padding:11px 28px;border-radius:10px;font-size:14px;font-weight:900;font-family:'Cairo',sans-serif;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 16px rgba(245,200,66,0.3);" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">💾 حفظ في السجل</button>
         </div>
     </div>
 </div>
