@@ -91,7 +91,7 @@
             <div class="tab-sub-dropdown" id="addDropdown" style="min-width:220px;">
                 <div class="tab-sub-item" onclick="openEquipmentFormModal();closeAddDropdown()">
                     <span style="font-size:14px;">🚜</span>
-                    <label>تسجيل معدات</label>
+                    <label>تسجيل الكمية - المعدات</label>
                 </div>
                 <div class="tab-sub-item" onclick="openCompanyCashflowForm();closeAddDropdown()">
                     <span style="font-size:14px;">🏢</span>
@@ -492,6 +492,17 @@
         <div class="modal-field">
             <label>ملف GeoJSON</label>
             <input type="text" id="editSubGeo" placeholder="ROADS.geojson">
+        </div>
+        <div class="modal-field">
+            <label>🚜 رابط سكريبت تسجيل الكمية - المعدات (Apps Script)</label>
+            <input type="text" id="editSubScriptUrl"
+                placeholder="https://script.google.com/macros/s/..."
+                style="font-size:11px;"
+                onfocus="this.style.borderColor='rgba(39,174,106,0.6)'"
+                onblur="this.style.borderColor=''">
+            <div style="margin-top:4px;font-size:10px;color:var(--text-soft);text-align:right;line-height:1.6;">
+                رابط Web App الخاص بتسجيل المعدات لهذا البند — يُستخدم عند الضغط على "تسجيل الكمية - المعدات"
+            </div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" onclick="closeModal('modalEditSubitem')">إلغاء</button>
