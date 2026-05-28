@@ -61,18 +61,12 @@ function _nextNo(rows, colName) {
 /* ── تنسيق التاريخ: يوم/شهر/سنة ── */
 function _fmtDate(val) {
     if (!val) return '—';
-
-    const d = new Date(val);
-
-    if (isNaN(d)) return val; // لو مش تاريخ سيبه زي ما هو
-
-    const day   = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year  = d.getFullYear();
-
-    return `${day}-${month}-${year}`;
+    // لو بصيغة YYYY-MM-DD
+    const m = String(val).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+    // لو بصيغة DD/MM/YYYY أو أي شكل تاني → ارجعه كما هو
+    return val;
 }
-
 
 
 
@@ -214,20 +208,8 @@ function _ccfBuildHistory(rows) {
         const enc = JSON.stringify(row).replace(/"/g, '&quot;');
         const tds = allKeys.map(k => {
             let val = row[k] !== undefined ? row[k] : '';
-           
             if (k === 'التاريخ') {
-            
-                const d = new Date(val);
-            
-                if (!isNaN(d.getTime())) {
-                    const day   = ('0' + d.getDate()).slice(-2);
-                    const month = ('0' + (d.getMonth() + 1)).slice(-2);
-                    const year  = d.getFullYear();
-            
-                    val = day + '-' + month + '-' + year;
-                }
-            }
-
+                val = _fmtDate(val);
             } else if (k === 'القيمة') {
                 const n = parseFloat(String(val).replace(/,/g, ''));
                 val = !isNaN(n) ? n.toLocaleString('en-US', { maximumFractionDigits: 2 }) : (val || '—');
@@ -518,20 +500,8 @@ function _concfBuildHistory(rows, filterContractor) {
         const enc = JSON.stringify(row).replace(/"/g, '&quot;');
         const tds = allKeys.map(k => {
             let val = row[k] !== undefined ? row[k] : '';
-                
             if (k === 'التاريخ') {
-            
-                const d = new Date(val);
-            
-                if (!isNaN(d.getTime())) {
-                    const day   = ('0' + d.getDate()).slice(-2);
-                    const month = ('0' + (d.getMonth() + 1)).slice(-2);
-                    const year  = d.getFullYear();
-            
-                    val = day + '-' + month + '-' + year;
-                }
-            }
-
+                val = _fmtDate(val);
             } else if (numKeys.has(k)) {
                 const n = parseFloat(String(val).replace(/,/g, ''));
                 val = !isNaN(n) ? n.toLocaleString('en-US', { maximumFractionDigits: 2 }) : (val || '—');
