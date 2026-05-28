@@ -2694,11 +2694,12 @@ function openEditSubitemModal(catId, subId) {
     const sub = cat.subitems.find(s => s.id === subId);
     if (!sub) return;
 
-    document.getElementById("editSubCatId").value  = catId;
-    document.getElementById("editSubId").value     = subId;
-    document.getElementById("editSubNumber").value = sub.number || "";
-    document.getElementById("editSubName").value   = sub.name   || "";
-    document.getElementById("editSubGeo").value    = sub.geoJsonFile || "";
+    document.getElementById("editSubCatId").value    = catId;
+    document.getElementById("editSubId").value       = subId;
+    document.getElementById("editSubNumber").value   = sub.number || "";
+    document.getElementById("editSubName").value     = sub.name   || "";
+    document.getElementById("editSubGeo").value      = sub.geoJsonFile || "";
+    document.getElementById("editSubScriptUrl").value = sub.scriptUrl || "";
 
     // Sheet: show full URL if sheetId looks like an ID, else show as-is
     const sheetVal = sub.sheetId || "";
@@ -2738,10 +2739,11 @@ function openEditSubitemModal(catId, subId) {
 function saveSubitemEdit() {
     const catId    = document.getElementById("editSubCatId").value;
     const subId    = document.getElementById("editSubId").value;
-    const number   = document.getElementById("editSubNumber").value.trim();
-    const name     = document.getElementById("editSubName").value.trim();
-    const sheetRaw = document.getElementById("editSubSheet").value.trim();
-    const geo      = document.getElementById("editSubGeo").value.trim();
+    const number    = document.getElementById("editSubNumber").value.trim();
+    const name      = document.getElementById("editSubName").value.trim();
+    const sheetRaw  = document.getElementById("editSubSheet").value.trim();
+    const geo       = document.getElementById("editSubGeo").value.trim();
+    const scriptUrl = document.getElementById("editSubScriptUrl").value.trim();
 
     if (!name || !sheetRaw || !geo) { showAlert("❌ يرجى ملء الاسم والشيت والـ GeoJSON"); return; }
 
@@ -2759,6 +2761,7 @@ function saveSubitemEdit() {
     sub.name        = name;
     sub.sheetId     = sheetId;
     sub.geoJsonFile = geo;
+    sub.scriptUrl   = scriptUrl;
 
     // إذا تغير الشيت أو الـ GeoJSON وكانت الطبقة محملة، أعد تحميلها
     if ((sheetChanged || geoChanged) && selectedItems[subId]) {
