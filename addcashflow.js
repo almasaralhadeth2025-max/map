@@ -159,7 +159,7 @@ function ccfLoadRowForEdit(rowJson) {
     showAlert('✏️ تم تحميل المستخلص للتعديل', 'success');
 }
 
-/* بناء سجل المستخلصات */
+/* بناء سجل المستخلصات — جدول كامل بكل أعمدة الشيت */
 function _ccfBuildHistory(rows) {
     const panel = document.getElementById('ccf_history_panel');
     const list  = document.getElementById('ccf_history_list');
@@ -171,26 +171,61 @@ function _ccfBuildHistory(rows) {
         return;
     }
 
-    list.innerHTML = [...rows].reverse().map((row, i) => {
-        const bg = i % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'transparent';
-        return `
-        <div onclick="ccfLoadRowForEdit(${JSON.stringify(row).replace(/"/g, '&quot;')})"
-             style="display:flex;align-items:center;justify-content:space-between;gap:8px;
-                    padding:9px 12px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);
-                    background:${bg};transition:background .15s;"
-             onmouseover="this.style.background='rgba(33,150,243,0.12)'"
-             onmouseout="this.style.background='${bg}'">
-            <span style="font-size:12px;font-weight:700;color:#5baddf;font-family:Cairo,sans-serif;">${row['رقم المستخلص'] || '-'}</span>
-            <span style="font-size:11px;color:rgba(255,255,255,0.5);font-family:Cairo,sans-serif;">${row['التاريخ'] || '-'}</span>
-            <span style="font-size:12px;font-weight:700;color:#f5c842;font-family:Cairo,sans-serif;">${parseFloat(String(row['القيمة'] || '0').replace(/,/g,'')).toLocaleString('en-US',{maximumFractionDigits:2})}</span>
-            <span style="font-size:11px;color:rgba(255,255,255,0.4);font-family:Cairo,sans-serif;">${row['الحالة'] || ''}</span>
-            <span style="font-size:10px;color:rgba(33,150,243,0.8);font-family:Cairo,sans-serif;">✎ تعديل</span>
-        </div>`;
+    /* اكتشف كل الأعمدة من الصفوف */
+    const skipKeys = new Set(['__rowIndex']);
+    const allKeys  = [];
+    rows.forEach(row => {
+        Object.keys(row).forEach(k => {
+            if (!skipKeys.has(k) && !allKeys.includes(k)) allKeys.push(k);
+        });
+    });
+
+    /* لون كل عمود */
+    const colColor = (key) => {
+        if (key === 'رقم المستخلص') return '#5baddf';
+        if (key === 'التاريخ')       return 'rgba(255,255,255,0.65)';
+        if (key === 'القيمة')         return '#f5c842';
+        if (key === 'الحالة')         return '#5cc890';
+        return 'rgba(255,255,255,0.75)';
+    };
+
+    /* رأس الجدول */
+    const thCells = allKeys.map(k =>
+        `<th style="padding:9px 12px;text-align:right;font-size:10px;font-weight:800;color:${colColor(k)};white-space:nowrap;letter-spacing:.3px;border-bottom:1px solid rgba(255,255,255,0.1);font-family:Cairo,sans-serif;">${k}</th>`
+    ).join('') + `<th style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.1);"></th>`;
+
+    /* صفوف الجدول */
+    const trRows = [...rows].reverse().map((row, i) => {
+        const bg  = i % 2 === 0 ? 'rgba(255,255,255,0.025)' : 'transparent';
+        const enc = JSON.stringify(row).replace(/"/g, '&quot;');
+        const tds = allKeys.map(k => {
+            let val = row[k] !== undefined ? row[k] : '';
+            if (k === 'القيمة') {
+                const n = parseFloat(String(val).replace(/,/g, ''));
+                val = !isNaN(n) ? n.toLocaleString('en-US', { maximumFractionDigits: 2 }) : (val || '—');
+            }
+            return `<td style="padding:9px 12px;text-align:right;font-size:12px;font-weight:600;color:${colColor(k)};white-space:nowrap;font-family:Cairo,sans-serif;border-bottom:1px solid rgba(255,255,255,0.04);">${val || '—'}</td>`;
+        }).join('');
+        return `<tr onclick="ccfLoadRowForEdit('${enc}')" style="background:${bg};cursor:pointer;transition:background .15s;" onmouseover="this.style.background='rgba(33,150,243,0.13)'" onmouseout="this.style.background='${bg}'">${tds}<td style="padding:9px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.04);"><span style="font-size:10px;color:rgba(33,150,243,0.85);font-weight:700;font-family:Cairo,sans-serif;white-space:nowrap;">✎ تعديل</span></td></tr>`;
     }).join('');
+
+    list.innerHTML = `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;min-width:400px;"><thead><tr style="background:linear-gradient(135deg,#1e0848,#12012a);position:sticky;top:0;z-index:2;">${thCells}</tr></thead><tbody>${trRows}</tbody></table></div>`;
     panel.style.display = 'block';
 }
 
-
+async function ccfOpenHistory() {
+    const panel = document.getElementById('ccf_history_panel');
+    if (panel && panel.style.display === 'block') { panel.style.display = 'none'; return; }
+    const list = document.getElementById('ccf_history_list');
+    if (list) list.innerHTML = '<div style="padding:14px;text-align:center;color:rgba(255,255,255,0.4);font-family:Cairo,sans-serif;font-size:12px;">⏳ جاري التحميل...</div>';
+    if (panel) panel.style.display = 'block';
+    try {
+        const { rows } = await _cfGet(CCF_URL);
+        _ccfBuildHistory(rows);
+    } catch (e) {
+        if (list) list.innerHTML = '<div style="padding:14px;text-align:center;color:#ff8a80;font-family:Cairo,sans-serif;font-size:12px;">❌ تعذر التحميل</div>';
+    }
+}
 
 function _ccfShowFeedback(msg, type) {
     const fb = document.getElementById('ccf_feedback');
@@ -422,7 +457,7 @@ function concfLoadRowForEdit(rowJson) {
     showAlert('✏️ تم تحميل مستخلص المقاول للتعديل', 'success');
 }
 
-/* بناء سجل مستخلصات المقاولين */
+/* بناء سجل مستخلصات المقاولين — جدول كامل بكل أعمدة الشيت */
 function _concfBuildHistory(rows, filterContractor) {
     const panel = document.getElementById('concf_history_panel');
     const list  = document.getElementById('concf_history_list');
@@ -434,22 +469,49 @@ function _concfBuildHistory(rows, filterContractor) {
 
     if (!display.length) { panel.style.display = 'none'; return; }
 
-    list.innerHTML = [...display].reverse().map((row, i) => {
-        const bg = i % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'transparent';
-        return `
-        <div onclick="concfLoadRowForEdit(${JSON.stringify(row).replace(/"/g, '&quot;')})"
-             style="display:flex;align-items:center;justify-content:space-between;gap:8px;
-                    padding:9px 12px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);
-                    background:${bg};transition:background .15s;"
-             onmouseover="this.style.background='rgba(245,200,66,0.1)'"
-             onmouseout="this.style.background='${bg}'">
-            <span style="font-size:12px;font-weight:700;color:#f5c842;font-family:Cairo,sans-serif;">${row['رقم المستخلص'] || '-'}</span>
-            ${!filterContractor ? `<span style="font-size:10px;color:rgba(255,255,255,0.5);font-family:Cairo,sans-serif;">${row['المقاول'] || ''}</span>` : ''}
-            <span style="font-size:11px;color:rgba(255,255,255,0.5);font-family:Cairo,sans-serif;">${row['التاريخ'] || '-'}</span>
-            <span style="font-size:12px;font-weight:700;color:#5cc890;font-family:Cairo,sans-serif;">${parseFloat(String(row['الإجمالي'] || '0').replace(/,/g,'')).toLocaleString('en-US',{maximumFractionDigits:2})}</span>
-            <span style="font-size:10px;color:rgba(245,200,66,0.8);font-family:Cairo,sans-serif;">✎ تعديل</span>
-        </div>`;
+    /* اكتشف كل الأعمدة */
+    const skipKeys = new Set(['__rowIndex']);
+    const allKeys  = [];
+    display.forEach(row => {
+        Object.keys(row).forEach(k => {
+            if (!skipKeys.has(k) && !allKeys.includes(k)) allKeys.push(k);
+        });
+    });
+
+    /* لون كل عمود */
+    const colColor = (key) => {
+        if (key === 'المقاول')        return 'rgba(255,255,255,0.9)';
+        if (key === 'رقم المستخلص') return '#f5c842';
+        if (key === 'التاريخ')       return 'rgba(255,255,255,0.65)';
+        if (key === 'الإجمالي')      return '#5cc890';
+        if (key === 'المنصرف')       return '#5baddf';
+        return 'rgba(255,255,255,0.75)';
+    };
+
+    /* رأس الجدول */
+    const thCells = allKeys.map(k =>
+        `<th style="padding:9px 12px;text-align:right;font-size:10px;font-weight:800;color:${colColor(k)};white-space:nowrap;letter-spacing:.3px;border-bottom:1px solid rgba(255,255,255,0.1);font-family:Cairo,sans-serif;">${k}</th>`
+    ).join('') + `<th style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.1);"></th>`;
+
+    /* الأعمدة الرقمية */
+    const numKeys = new Set(['الإجمالي', 'المنصرف']);
+
+    /* صفوف الجدول */
+    const trRows = [...display].reverse().map((row, i) => {
+        const bg  = i % 2 === 0 ? 'rgba(255,255,255,0.025)' : 'transparent';
+        const enc = JSON.stringify(row).replace(/"/g, '&quot;');
+        const tds = allKeys.map(k => {
+            let val = row[k] !== undefined ? row[k] : '';
+            if (numKeys.has(k)) {
+                const n = parseFloat(String(val).replace(/,/g, ''));
+                val = !isNaN(n) ? n.toLocaleString('en-US', { maximumFractionDigits: 2 }) : (val || '—');
+            }
+            return `<td style="padding:9px 12px;text-align:right;font-size:12px;font-weight:600;color:${colColor(k)};white-space:nowrap;font-family:Cairo,sans-serif;border-bottom:1px solid rgba(255,255,255,0.04);">${val || '—'}</td>`;
+        }).join('');
+        return `<tr onclick="concfLoadRowForEdit('${enc}')" style="background:${bg};cursor:pointer;transition:background .15s;" onmouseover="this.style.background='rgba(245,200,66,0.1)'" onmouseout="this.style.background='${bg}'">${tds}<td style="padding:9px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.04);"><span style="font-size:10px;color:rgba(245,200,66,0.85);font-weight:700;font-family:Cairo,sans-serif;white-space:nowrap;">✎ تعديل</span></td></tr>`;
     }).join('');
+
+    list.innerHTML = `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;min-width:480px;"><thead><tr style="background:linear-gradient(135deg,#1a0a2e,#3d1060);position:sticky;top:0;z-index:2;">${thCells}</tr></thead><tbody>${trRows}</tbody></table></div>`;
     panel.style.display = 'block';
 }
 
@@ -530,6 +592,7 @@ window.ccfSubmit                   = ccfSubmit;
 window.ccfUpdatePreview            = ccfUpdatePreview;
 window.ccfLoadRowForEdit           = ccfLoadRowForEdit;
 window.ccfReset                    = ccfReset;
+window.ccfOpenHistory              = ccfOpenHistory;
 
 window.openContractorCashflowForm  = openContractorCashflowForm;
 window.closeContractorCashflowForm = closeContractorCashflowForm;
