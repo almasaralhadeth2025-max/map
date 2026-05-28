@@ -145,15 +145,7 @@ function ccfUpdatePreview() {
 
 /* تحميل صف للتعديل */
 function ccfLoadRowForEdit(rowJson) {
-    let row;
-    try {
-        // فك التشفير الآمن الذي أضفناه في الجدول
-        row = JSON.parse(decodeURIComponent(rowJson));
-    } catch(e) {
-        // لمعالجة أي بيانات قديمة
-        row = typeof rowJson === 'string' ? JSON.parse(rowJson) : rowJson;
-    }
-    
+    const row = typeof rowJson === 'string' ? JSON.parse(rowJson) : rowJson;
     _ccfEditing = row;
     _ccfSetMode('edit');
 
@@ -174,6 +166,7 @@ function ccfLoadRowForEdit(rowJson) {
     if (hist) hist.style.display = 'none';
     showAlert('✏️ تم تحميل المستخلص للتعديل', 'success');
 }
+
 /* بناء سجل المستخلصات — جدول كامل بكل أعمدة الشيت */
 function _ccfBuildHistory(rows) {
     const panel = document.getElementById('ccf_history_panel');
@@ -212,7 +205,7 @@ function _ccfBuildHistory(rows) {
     /* صفوف الجدول */
     const trRows = [...rows].reverse().map((row, i) => {
         const bg  = i % 2 === 0 ? 'rgba(255,255,255,0.025)' : 'transparent';
-        const enc = encodeURIComponent(JSON.stringify(row)).replace(/'/g, "%27");
+        const enc = JSON.stringify(row).replace(/"/g, '&quot;');
         const tds = allKeys.map(k => {
             let val = row[k] !== undefined ? row[k] : '';
             if (k === 'التاريخ') {
@@ -429,13 +422,7 @@ function concfUpdatePreview() {
 
 /* تحميل صف مقاول للتعديل */
 function concfLoadRowForEdit(rowJson) {
-    let row;
-    try {
-        row = JSON.parse(decodeURIComponent(rowJson));
-    } catch(e) {
-        row = typeof rowJson === 'string' ? JSON.parse(rowJson) : rowJson;
-    }
-    
+    const row = typeof rowJson === 'string' ? JSON.parse(rowJson) : rowJson;
     _concfEditing = row;
     _concfSetMode('edit');
 
@@ -510,7 +497,7 @@ function _concfBuildHistory(rows, filterContractor) {
     /* صفوف الجدول */
     const trRows = [...display].reverse().map((row, i) => {
         const bg  = i % 2 === 0 ? 'rgba(255,255,255,0.025)' : 'transparent';
-        const enc = encodeURIComponent(JSON.stringify(row)).replace(/'/g, "%27");
+        const enc = JSON.stringify(row).replace(/"/g, '&quot;');
         const tds = allKeys.map(k => {
             let val = row[k] !== undefined ? row[k] : '';
             if (k === 'التاريخ') {
@@ -616,7 +603,3 @@ window.concfSyncContractor         = concfSyncContractor;
 window.concfSyncContractorText     = concfSyncContractorText;
 window.concfSetMode                = _concfSetMode;
 window.concfBuildHistory           = _concfBuildHistory;
-window.ccfOpenHistory = function() {
-    const panel = document.getElementById('ccf_history_panel');
-    if (panel) panel.style.display = 'block';
-};
