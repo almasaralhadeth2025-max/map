@@ -58,14 +58,30 @@ function _nextNo(rows, colName) {
     return String(max + 1).padStart(3, '0');
 }
 
-/* ── تنسيق التاريخ: يوم/شهر/سنة ── */
+/* ── تنسيق التاريخ: DD-MM-YYYY ── */
 function _fmtDate(val) {
     if (!val) return '—';
+    const s = String(val).trim();
+
     // لو بصيغة YYYY-MM-DD
-    const m = String(val).match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (m) return `${m[3]}/${m[2]}/${m[1]}`;
-    // لو بصيغة DD/MM/YYYY أو أي شكل تاني → ارجعه كما هو
-    return val;
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) return `${iso[3]}-${iso[2]}-${iso[1]}`;
+
+    // لو بصيغة DD/MM/YYYY
+    const dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (dmy) return `${dmy[1].padStart(2,'0')}-${dmy[2].padStart(2,'0')}-${dmy[3]}`;
+
+    // لو بصيغة نصية مثل "Thu May 14 2026 ..." أو أي صيغة JavaScript Date
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+        const day   = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year  = d.getFullYear();
+        return `${day}-${month}-${year}`;
+    }
+
+    // fallback
+    return s;
 }
 
 
