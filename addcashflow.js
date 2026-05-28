@@ -258,7 +258,10 @@ function _ccfBuildHistory(rows) {
     /* صفوف الجدول */
     const trRows = [...rows].reverse().map((row, i) => {
         const bg  = i % 2 === 0 ? 'rgba(255,255,255,0.025)' : 'transparent';
-        const enc = JSON.stringify(row).replace(/"/g, '&quot;');
+        // نعالج التاريخ في الـ row قبل التمرير لـ ccfLoadRowForEdit
+        const cleanRow = { ...row };
+        if (cleanRow['التاريخ']) cleanRow['التاريخ'] = _fmtDate(cleanRow['التاريخ']);
+        const enc = JSON.stringify(cleanRow).replace(/"/g, '&quot;');
         const tds = allKeys.map(k => {
             let val = row[k] !== undefined ? row[k] : '';
             if (k === 'التاريخ') {
@@ -550,7 +553,10 @@ function _concfBuildHistory(rows, filterContractor) {
     /* صفوف الجدول */
     const trRows = [...display].reverse().map((row, i) => {
         const bg  = i % 2 === 0 ? 'rgba(255,255,255,0.025)' : 'transparent';
-        const enc = JSON.stringify(row).replace(/"/g, '&quot;');
+        // نعالج التاريخ في الـ row قبل التمرير لـ concfLoadRowForEdit
+        const cleanRow = { ...row };
+        if (cleanRow['التاريخ']) cleanRow['التاريخ'] = _fmtDate(cleanRow['التاريخ']);
+        const enc = JSON.stringify(cleanRow).replace(/"/g, '&quot;');
         const tds = allKeys.map(k => {
             let val = row[k] !== undefined ? row[k] : '';
             if (k === 'التاريخ') {
