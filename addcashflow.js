@@ -214,8 +214,20 @@ function _ccfBuildHistory(rows) {
         const enc = JSON.stringify(row).replace(/"/g, '&quot;');
         const tds = allKeys.map(k => {
             let val = row[k] !== undefined ? row[k] : '';
+           
             if (k === 'التاريخ') {
-                val = _fmtDate(val);
+            
+                const d = new Date(val);
+            
+                if (!isNaN(d.getTime())) {
+                    const day   = ('0' + d.getDate()).slice(-2);
+                    const month = ('0' + (d.getMonth() + 1)).slice(-2);
+                    const year  = d.getFullYear();
+            
+                    val = day + '-' + month + '-' + year;
+                }
+            }
+
             } else if (k === 'القيمة') {
                 const n = parseFloat(String(val).replace(/,/g, ''));
                 val = !isNaN(n) ? n.toLocaleString('en-US', { maximumFractionDigits: 2 }) : (val || '—');
@@ -506,8 +518,20 @@ function _concfBuildHistory(rows, filterContractor) {
         const enc = JSON.stringify(row).replace(/"/g, '&quot;');
         const tds = allKeys.map(k => {
             let val = row[k] !== undefined ? row[k] : '';
+                
             if (k === 'التاريخ') {
-                val = _fmtDate(val);
+            
+                const d = new Date(val);
+            
+                if (!isNaN(d.getTime())) {
+                    const day   = ('0' + d.getDate()).slice(-2);
+                    const month = ('0' + (d.getMonth() + 1)).slice(-2);
+                    const year  = d.getFullYear();
+            
+                    val = day + '-' + month + '-' + year;
+                }
+            }
+
             } else if (numKeys.has(k)) {
                 const n = parseFloat(String(val).replace(/,/g, ''));
                 val = !isNaN(n) ? n.toLocaleString('en-US', { maximumFractionDigits: 2 }) : (val || '—');
