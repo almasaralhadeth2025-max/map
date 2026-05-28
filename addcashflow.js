@@ -422,6 +422,7 @@ function concfUpdatePreview() {
 
 /* تحميل صف مقاول للتعديل */
 function concfLoadRowForEdit(rowJson) {
+    openModal('contractorCashflowModal'); // ✅ يخلي الفورم يفتح
     const row = typeof rowJson === 'string' ? JSON.parse(rowJson) : rowJson;
     _concfEditing = row;
     _concfSetMode('edit');
