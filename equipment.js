@@ -1225,3 +1225,409 @@ function importEquipmentTypesFromCSV() {
     area.value = '';
     showAlert(`✅ تمت إضافة ${newOnes.length} نوع جديد`, 'success');
 }
+/* ====================================================
+   CUMULATIVE QTY TAB — تبويب الكمية التراكمية
+   يُضاف في نهاية equipment.js
+   ==================================================== */
+
+/* ── حالة التبويب النشط في مودال تسجيل المعدات ── */
+let _eqFormActiveTab = 'daily'; // 'daily' | 'cumulative'
+
+/* ── تبديل التبويب ── */
+function eqSwitchFormTab(tab) {
+    _eqFormActiveTab = tab;
+
+    const isDaily = tab === 'daily';
+
+    // أزرار التبويب
+    const btnDaily = document.getElementById('eqfTabDaily');
+    const btnCumul = document.getElementById('eqfTabCumul');
+    if (btnDaily) {
+        btnDaily.style.background = isDaily ? 'rgba(255,255,255,0.9)' : 'transparent';
+        btnDaily.style.color      = isDaily ? '#1a6040' : 'rgba(255,255,255,0.65)';
+    }
+    if (btnCumul) {
+        btnCumul.style.background = !isDaily ? 'rgba(255,255,255,0.9)' : 'transparent';
+        btnCumul.style.color      = !isDaily ? '#1a4a8a' : 'rgba(255,255,255,0.65)';
+    }
+
+    // محتوى التبويبين
+    const bodyDaily = document.getElementById('eqfBodyDaily');
+    const bodyCumul = document.getElementById('eqfBodyCumul');
+    if (bodyDaily) bodyDaily.style.display = isDaily ? 'block' : 'none';
+    if (bodyCumul) bodyCumul.style.display = !isDaily ? 'block' : 'none';
+
+    // زر الإرسال — نغير نصه
+    const submitBtn = document.getElementById('eqf_submit_btn');
+    if (submitBtn) {
+        submitBtn.textContent = isDaily ? '💾 حفظ في السجل' : '💾 حفظ الكمية التراكمية';
+    }
+
+    // زر إعادة التعيين — يعمل على التبويب النشط
+}
+
+/* ── فتح المودال: إعادة تعيين التبويب للـ daily افتراضياً ── */
+const _origOpenEquipmentFormModal_cumul = window.openEquipmentFormModal;
+window.openEquipmentFormModal = function() {
+    _origOpenEquipmentFormModal_cumul();
+    // تأكد من أن التبويب اليومي هو النشط عند الفتح
+    eqSwitchFormTab('daily');
+    // تعيين تاريخ اليوم للتبويب التراكمي أيضاً
+    const today = new Date().toISOString().split('T')[0];
+    const cDate = document.getElementById('eqfc_date');
+    if (cDate) cDate.value = today;
+    // ملء المقاولين في تبويب التراكمي
+    eqPopulateCumulContractors();
+};
+
+/* ── ملء قائمة المقاولين في تبويب التراكمي ── */
+function eqPopulateCumulContractors() {
+    const sel = document.getElementById('eqfc_contractor');
+    if (!sel) return;
+    const currentVal = sel.value;
+    sel.innerHTML = '<option value="">-- اختر المقاول --</option>';
+    const contractors = new Set();
+    Object.values(allData || {}).forEach(sheetData => {
+        Object.values(sheetData).forEach(row => {
+            const c = (row['CONTRACTOR'] || '').trim();
+            if (c) contractors.add(c);
+        });
+    });
+    Object.keys(contractorMap || {}).forEach(name => {
+        if (name.trim()) contractors.add(name.trim());
+    });
+    const sorted = [...contractors].sort((a, b) => a.localeCompare(b, 'ar'));
+    sorted.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+    });
+    if (currentVal) sel.value = currentVal;
+}
+
+/* ── عند اختيار عنصر من الخريطة أو القائمة: مزامنة بيانات البند للتبويب التراكمي ── */
+const _origEqSelectElement_cumul = window.eqSelectElement;
+window.eqSelectElement = function(id, name) {
+    _origEqSelectElement_cumul(id, name);
+    // نسخ القيم للتبويب التراكمي
+    _eqCopyBandDataToCumul();
+};
+
+function _eqCopyBandDataToCumul() {
+    // العنصر
+    const elemId   = document.getElementById('eqf_element_id')?.value   || '';
+    const elemName = document.getElementById('eqf_element_name')?.value || '';
+    const elemSearch = document.getElementById('eqf_element_search')?.value || '';
+
+    const cId   = document.getElementById('eqfc_element_id');
+    const cName = document.getElementById('eqfc_element_name');
+    const cSearch = document.getElementById('eqfc_element_search');
+    const cInfo   = document.getElementById('eqfc_element_info');
+    const cInfoName = document.getElementById('eqfc_element_info_name');
+    const cInfoId   = document.getElementById('eqfc_element_info_id');
+
+    if (cId)     cId.value = elemId;
+    if (cName)   cName.value = elemName;
+    if (cSearch) cSearch.value = elemSearch;
+    if (cInfo && elemName) {
+        cInfo.style.display = 'flex';
+        if (cInfoName) cInfoName.textContent = elemName;
+        if (cInfoId)   cInfoId.textContent   = 'ID: ' + elemId;
+    }
+
+    // البند
+    ['eqf_item_name','eqf_band_sheet','eqf_cat_name','eqf_cat_id','eqf_group_name','eqf_group_id'].forEach(fieldId => {
+        const src = document.getElementById(fieldId);
+        const dst = document.getElementById(fieldId.replace('eqf_','eqfc_'));
+        if (src && dst) dst.value = src.value;
+    });
+
+    // label زر البند
+    const srcLbl = document.getElementById('eqf_band_label');
+    const dstLbl = document.getElementById('eqfc_band_label');
+    if (srcLbl && dstLbl) {
+        dstLbl.textContent = srcLbl.textContent;
+        dstLbl.style.color = srcLbl.style.color;
+    }
+    const dstBtn = document.getElementById('eqfc_band_btn');
+    const srcBtn = document.getElementById('eqf_band_btn');
+    if (dstBtn && srcBtn) {
+        dstBtn.style.borderColor = srcBtn.style.borderColor;
+        if (srcBtn.disabled) {
+            dstBtn.disabled = true;
+            dstBtn.style.opacity  = '0.6';
+            dstBtn.style.cursor   = 'not-allowed';
+        } else {
+            dstBtn.disabled = false;
+            dstBtn.style.opacity  = '';
+            dstBtn.style.cursor   = '';
+        }
+    }
+}
+
+/* ── مسح عنصر التبويب التراكمي ── */
+function eqClearCumulElement() {
+    document.getElementById('eqfc_element_id').value    = '';
+    document.getElementById('eqfc_element_name').value  = '';
+    document.getElementById('eqfc_element_search').value = '';
+    document.getElementById('eqfc_element_info').style.display = 'none';
+
+    const bandBtn = document.getElementById('eqfc_band_btn');
+    if (bandBtn) {
+        bandBtn.disabled = false;
+        bandBtn.style.opacity  = '';
+        bandBtn.style.cursor   = '';
+        bandBtn.style.borderColor = '';
+    }
+    ['eqfc_item_name','eqfc_band_sheet','eqfc_cat_name','eqfc_cat_id','eqfc_group_name','eqfc_group_id'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    const lbl = document.getElementById('eqfc_band_label');
+    if (lbl) { lbl.textContent = '-- اختر البند --'; lbl.style.color = ''; }
+}
+
+/* ── فتح Band Picker للتبويب التراكمي ── */
+function eqOpenBandPickerCumul() {
+    // نضع علامة أننا في وضع التراكمي
+    window._eqBandPickerTarget = 'cumul';
+    eqOpenBandPicker();
+}
+
+/* ── تعديل eqSelectBand لدعم كلا التبويبين ── */
+const _origEqSelectBand = window.eqSelectBand;
+window.eqSelectBand = function(name, sheetId, catName, catId) {
+    if (window._eqBandPickerTarget === 'cumul') {
+        window._eqBandPickerTarget = null;
+        // ملء حقول التبويب التراكمي
+        document.getElementById('eqfc_item_name').value  = name;
+        document.getElementById('eqfc_band_sheet').value = sheetId || '';
+        const lbl = document.getElementById('eqfc_band_label');
+        if (lbl) { lbl.textContent = name; lbl.style.color = 'rgba(255,255,255,0.9)'; }
+        document.getElementById('eqfc_band_btn').style.borderColor = 'rgba(33,150,243,0.5)';
+        document.getElementById('eqfc_cat_name').value = catName || '';
+        document.getElementById('eqfc_cat_id').value   = catId   || '';
+
+        const sub = (categories || []).flatMap(c => c.subitems).find(s => s.sheetId === sheetId && s.name === name);
+        const group = sub ? getGroupForSub(sub.id) : null;
+        document.getElementById('eqfc_group_name').value = group ? (group.name || '—') : '—';
+        document.getElementById('eqfc_group_id').value   = group ? (group.id   || '')  : '';
+
+        eqCloseBandPicker();
+    } else {
+        window._eqBandPickerTarget = null;
+        _origEqSelectBand(name, sheetId, catName, catId);
+    }
+};
+
+/* ── Feedback للتبويب التراكمي ── */
+function eqShowCumulFeedback(msg, type) {
+    const fb = document.getElementById('eqfc_feedback');
+    if (!fb) return;
+    fb.className = 'eqf-' + type;
+    fb.textContent = msg;
+    fb.style.display = 'block';
+    if (type === 'success') setTimeout(() => { fb.style.display = 'none'; fb.className = ''; }, 4000);
+}
+
+/* ── إعادة تعيين التبويب التراكمي ── */
+function eqResetCumulForm() {
+    document.getElementById('eqfc_element_id').value    = '';
+    document.getElementById('eqfc_element_name').value  = '';
+    document.getElementById('eqfc_element_search').value = '';
+    document.getElementById('eqfc_element_info').style.display = 'none';
+    document.getElementById('eqfc_item_name').value     = '';
+    document.getElementById('eqfc_band_sheet').value    = '';
+    document.getElementById('eqfc_cat_name').value      = '';
+    document.getElementById('eqfc_cat_id').value        = '';
+    document.getElementById('eqfc_group_name').value    = '';
+    document.getElementById('eqfc_group_id').value      = '';
+    document.getElementById('eqfc_contractor').value    = '';
+    document.getElementById('eqfc_total_qty').value     = '';
+    document.getElementById('eqfc_cumul_qty').value     = '';
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('eqfc_date').value = today;
+    const lbl = document.getElementById('eqfc_band_label');
+    if (lbl) { lbl.textContent = '-- اختر البند --'; lbl.style.color = ''; }
+    const btn = document.getElementById('eqfc_band_btn');
+    if (btn) { btn.style.borderColor = ''; btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = ''; }
+    const fb = document.getElementById('eqfc_feedback');
+    if (fb) { fb.style.display = 'none'; fb.className = ''; }
+}
+
+/* ── إرسال بيانات التبويب التراكمي ── */
+async function eqSubmitCumulForm() {
+    const element_id   = document.getElementById('eqfc_element_id').value.trim();
+    const element_name = document.getElementById('eqfc_element_name').value.trim();
+    const item_name    = document.getElementById('eqfc_item_name').value.trim();
+    const cat_name     = document.getElementById('eqfc_cat_name').value.trim();
+    const group_name   = document.getElementById('eqfc_group_name').value.trim();
+    const contractor   = document.getElementById('eqfc_contractor').value.trim();
+    const date         = document.getElementById('eqfc_date').value.trim();
+    const total_qty    = parseFloat(document.getElementById('eqfc_total_qty').value) || 0;
+    const cumul_qty    = parseFloat(document.getElementById('eqfc_cumul_qty').value) || 0;
+    const band_sheet   = document.getElementById('eqfc_band_sheet').value.trim();
+
+    // Validation
+    if (!element_name) { eqShowCumulFeedback('❌ يرجى اختيار أو إدخال اسم العنصر', 'error'); return; }
+    if (!item_name)    { eqShowCumulFeedback('❌ يرجى اختيار البند', 'error'); return; }
+    if (!contractor)   { eqShowCumulFeedback('❌ يرجى اختيار المقاول', 'error'); return; }
+    if (!date)         { eqShowCumulFeedback('❌ يرجى اختيار التاريخ', 'error'); return; }
+    if (!band_sheet)   { eqShowCumulFeedback('❌ البند المختار ليس له شيت مرتبط — راجع الإعدادات', 'error'); return; }
+    if (!total_qty && !cumul_qty) { eqShowCumulFeedback('❌ يرجى إدخال الكمية الإجمالية أو الكمية المنفذة التراكمية', 'error'); return; }
+
+    const btn = document.getElementById('eqf_submit_btn');
+    btn.disabled = true;
+    btn.textContent = '⏳ جاري الحفظ...';
+    eqShowCumulFeedback('⏳ جاري إرسال البيانات...', 'loading');
+
+    // جيب scriptUrl
+    let scriptUrl = '';
+    try {
+        const allSubs = (categories || []).flatMap(c => c.subitems || []);
+        const matchedSub = allSubs.find(s => s.sheetId === band_sheet);
+        if (matchedSub && matchedSub.scriptUrl) scriptUrl = matchedSub.scriptUrl.trim();
+        if (!scriptUrl) throw new Error(
+            'لم يتم العثور على رابط السكريبت — تأكد من إعدادات البند الفرعي'
+        );
+    } catch (fetchErr) {
+        eqShowCumulFeedback('❌ ' + fetchErr.message, 'error');
+        btn.disabled = false;
+        btn.textContent = '💾 حفظ الكمية التراكمية';
+        return;
+    }
+
+    const payload = {
+        form_type: 'cumulative',
+        group_name, cat_name, element_id, element_name, item_name,
+        contractor, date, total_qty, cumul_qty
+    };
+
+    try {
+        const r = await fetch(scriptUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify(payload),
+            redirect: 'follow'
+        });
+        const text = await r.text();
+        let resp = {};
+        try { resp = JSON.parse(text); } catch(e) {}
+
+        if (resp.status === 'success' || r.ok) {
+            eqShowCumulFeedback('✅ تم حفظ الكمية التراكمية بنجاح!', 'success');
+            showAlert('✅ تم تسجيل الكمية التراكمية بنجاح', 'success');
+            setTimeout(() => eqResetCumulForm(), 2500);
+        } else {
+            throw new Error(resp.message || 'فشل الحفظ');
+        }
+    } catch(e) {
+        console.error('Cumulative form submit error:', e);
+        eqShowCumulFeedback('❌ تعذر الحفظ: ' + (e.message || 'خطأ في الاتصال'), 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '💾 حفظ الكمية التراكمية';
+    }
+}
+
+/* ── تعديل eqResetForm ليعمل على التبويب النشط ── */
+const _origEqResetForm_cumul = window.eqResetForm;
+window.eqResetForm = function() {
+    if (_eqFormActiveTab === 'cumulative') {
+        eqResetCumulForm();
+    } else {
+        _origEqResetForm_cumul();
+    }
+};
+
+/* ── تعديل eqSubmitForm ليوجه للدالة الصحيحة حسب التبويب ── */
+const _origEqSubmitForm_cumul = window.eqSubmitForm;
+window.eqSubmitForm = function() {
+    if (_eqFormActiveTab === 'cumulative') {
+        eqSubmitCumulForm();
+    } else {
+        _origEqSubmitForm_cumul();
+    }
+};
+
+/* ── عند اختيار عنصر من القائمة في تبويب التراكمي ── */
+function eqFilterCumulElementDropdown() {
+    const inp = document.getElementById('eqfc_element_search');
+    const dd  = document.getElementById('eqfc_element_dropdown');
+    const q   = (inp.value || '').trim().toLowerCase();
+
+    const filtered = q
+        ? _eqAllElements.filter(e => e.name.toLowerCase().includes(q) || e.id.toLowerCase().includes(q))
+        : _eqAllElements;
+
+    if (!filtered.length) {
+        dd.innerHTML = '<div style="padding:12px 14px;text-align:center;color:rgba(255,255,255,0.3);font-size:12px;font-family:\'Cairo\',sans-serif;">لا توجد عناصر مطابقة</div>';
+    } else {
+        dd.innerHTML = filtered.slice(0, 60).map(e =>
+            '<div onclick="eqSelectCumulElement(\'' + e.id.replace(/'/g,"\\'") + '\',\'' + e.name.replace(/'/g,"\\'") + '\')" ' +
+            'style="padding:9px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);transition:background 0.15s;display:flex;flex-direction:column;gap:2px;" ' +
+            'onmouseover="this.style.background=\'rgba(33,150,243,0.12)\'" onmouseout="this.style.background=\'\'">'+
+            '<span style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.9);font-family:\'Cairo\',sans-serif;">' + e.name + '</span>' +
+            '<span style="font-size:10px;color:rgba(255,255,255,0.4);font-family:\'Cairo\',sans-serif;">ID: ' + e.id + ' • ' + e.subName + '</span>' +
+            '</div>'
+        ).join('');
+    }
+    dd.style.display = 'block';
+
+    setTimeout(() => {
+        document.addEventListener('click', _eqCumulDropdownOutside, { once: true, capture: true });
+    }, 0);
+}
+
+function _eqCumulDropdownOutside(e) {
+    const dd  = document.getElementById('eqfc_element_dropdown');
+    const inp = document.getElementById('eqfc_element_search');
+    if (!dd || !inp) return;
+    if (!dd.contains(e.target) && e.target !== inp) {
+        dd.style.display = 'none';
+    } else {
+        document.addEventListener('click', _eqCumulDropdownOutside, { once: true, capture: true });
+    }
+}
+
+function eqSelectCumulElement(id, name) {
+    document.getElementById('eqfc_element_id').value    = id;
+    document.getElementById('eqfc_element_name').value  = name;
+    document.getElementById('eqfc_element_search').value = name;
+    document.getElementById('eqfc_element_dropdown').style.display = 'none';
+
+    const info = document.getElementById('eqfc_element_info');
+    document.getElementById('eqfc_element_info_name').textContent = name;
+    document.getElementById('eqfc_element_info_id').textContent   = 'ID: ' + id;
+    info.style.display = 'flex';
+
+    const el = _eqAllElements.find(e => e.id === id && e.name === name)
+            || _eqAllElements.find(e => e.id === id);
+    if (el) {
+        let matchedSub = null, matchedCat = null;
+        (categories || []).forEach(cat => {
+            cat.subitems.forEach(sub => {
+                if (sub.sheetId === el.sheetId) { matchedSub = sub; matchedCat = cat; }
+            });
+        });
+        if (matchedSub && matchedCat) {
+            document.getElementById('eqfc_item_name').value  = matchedSub.name;
+            document.getElementById('eqfc_band_sheet').value = matchedSub.sheetId || '';
+            document.getElementById('eqfc_cat_name').value   = matchedCat.name || '';
+            document.getElementById('eqfc_cat_id').value     = matchedCat.id   || '';
+            const lbl = document.getElementById('eqfc_band_label');
+            if (lbl) { lbl.textContent = matchedSub.name; lbl.style.color = 'rgba(255,255,255,0.9)'; }
+            const bandBtn = document.getElementById('eqfc_band_btn');
+            if (bandBtn) {
+                bandBtn.style.borderColor = 'rgba(33,150,243,0.5)';
+                bandBtn.disabled = true;
+                bandBtn.style.opacity = '0.6';
+                bandBtn.style.cursor  = 'not-allowed';
+            }
+            const group = getGroupForSub(matchedSub.id);
+            document.getElementById('eqfc_group_name').value = group ? (group.name || '—') : '—';
+            document.getElementById('eqfc_group_id').value   = group ? (group.id   || '')  : '';
+        }
+    }
+}
