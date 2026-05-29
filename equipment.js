@@ -637,7 +637,7 @@ async function eqSubmitForm() {
 
         if (resp.status === 'success' || r.ok) {
             eqShowFeedback('✅ تم حفظ بيانات المعدات بنجاح في السجل!', 'success');
-            showAlert('✅ تم تسجيل المعدات بنجاح', 'success');
+            showAlert('✅ تم تسجيل الكمية - المعدات بنجاح', 'success');
             setTimeout(() => eqResetForm(), 2500);
         } else {
             throw new Error(resp.message || 'فشل الحفظ');
