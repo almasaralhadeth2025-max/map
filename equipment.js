@@ -141,13 +141,77 @@ function eqSelectElement(id, name) {
     const info = document.getElementById('eqf_element_info');
     document.getElementById('eqf_element_info_name').textContent = name;
     document.getElementById('eqf_element_info_id').textContent   = 'ID: ' + id;
-    info.style.display = 'flex';}
+    info.style.display = 'flex';
+
+    // ── ملء البند الفرعي تلقائياً من العنصر المختار ──
+    const el = _eqAllElements.find(e => e.id === id && e.name === name)
+            || _eqAllElements.find(e => e.id === id);
+    if (el) {
+        // ابحث عن البند الفرعي الكامل في categories
+        let matchedSub = null, matchedCat = null;
+        (categories || []).forEach(cat => {
+            cat.subitems.forEach(sub => {
+                if (sub.sheetId === el.sheetId) {
+                    matchedSub = sub;
+                    matchedCat = cat;
+                }
+            });
+        });
+
+        if (matchedSub && matchedCat) {
+            // ملء بيانات البند
+            document.getElementById('eqf_item_name').value  = matchedSub.name;
+            document.getElementById('eqf_band_sheet').value = matchedSub.sheetId || '';
+            document.getElementById('eqf_cat_name').value   = matchedCat.name || '';
+            document.getElementById('eqf_cat_id').value     = matchedCat.id   || '';
+
+            // تحديث الـ label في الزر
+            const lbl = document.getElementById('eqf_band_label');
+            if (lbl) {
+                lbl.textContent = matchedSub.name;
+                lbl.style.color = 'rgba(255,255,255,0.9)';
+            }
+            const bandBtn = document.getElementById('eqf_band_btn');
+            if (bandBtn) {
+                bandBtn.style.borderColor = 'rgba(39,174,106,0.5)';
+                bandBtn.disabled = true;
+                bandBtn.style.opacity = '0.6';
+                bandBtn.style.cursor  = 'not-allowed';
+                bandBtn.title = 'البند مرتبط تلقائياً بالعنصر المختار';
+            }
+
+            // المجموعة
+            const group = getGroupForSub(matchedSub.id);
+            document.getElementById('eqf_group_name').value = group ? (group.name || '—') : '—';
+            document.getElementById('eqf_group_id').value   = group ? (group.id   || '')  : '';
+        }
+    }
+}
 
 function eqClearElement() {
     document.getElementById('eqf_element_id').value   = '';
     document.getElementById('eqf_element_name').value = '';
     document.getElementById('eqf_element_search').value = '';
     document.getElementById('eqf_element_info').style.display = 'none';
+
+    // ── إعادة تفعيل زر البند ──
+    const bandBtn = document.getElementById('eqf_band_btn');
+    if (bandBtn) {
+        bandBtn.disabled = false;
+        bandBtn.style.opacity  = '';
+        bandBtn.style.cursor   = '';
+        bandBtn.style.borderColor = '';
+        bandBtn.title = '';
+    }
+    // مسح بيانات البند
+    document.getElementById('eqf_item_name').value   = '';
+    document.getElementById('eqf_band_sheet').value  = '';
+    document.getElementById('eqf_cat_name').value    = '';
+    document.getElementById('eqf_cat_id').value      = '';
+    document.getElementById('eqf_group_name').value  = '';
+    document.getElementById('eqf_group_id').value    = '';
+    const lbl = document.getElementById('eqf_band_label');
+    if (lbl) { lbl.textContent = '-- اختر البند --'; lbl.style.color = ''; }
 }
 
 /* ── Pick from map ── */
@@ -534,81 +598,25 @@ async function eqSubmitForm() {
     // Disable submit button
     const btn = document.getElementById('eqf_submit_btn');
     btn.disabled = true;
-    btn.textContent = '⏳ جاري الجلب...';
-    eqShowFeedback('⏳ جاري جلب رابط السكريبت من الشيت...', 'loading');
+    btn.textContent = '⏳ جاري الحفظ...';
+    eqShowFeedback('⏳ جاري إرسال البيانات...', 'loading');
 
-    // ── جيب URL السكريبت من Sheet2 A1 ──
-    // الاستراتيجية:
-    // 1. جيب HTML الشيت واستخرج منه كل الـ gids مع أسمائها
-    // 2. ابحث عن Sheet2 بالاسم، وإلا جرّب كل الـ gids
-    // 3. أول sheet فيها A1 = رابط Apps Script → استخدمه
+    // ── جيب scriptUrl من البند الفرعي في categories ──
     let scriptUrl = '';
     try {
-        // ── الخطوة 1: استخرج كل الـ gids من HTML الشيت ──
-        let orderedGids = [];
-        try {
-            const htmlUrl = `https://docs.google.com/spreadsheets/d/${band_sheet}/edit`;
-            const htmlRes = await fetch(htmlUrl);
-            if (htmlRes.ok) {
-                const html = await htmlRes.text();
-                // Google Sheets يحط أسماء الـ sheets وgids في الـ HTML
-                // مثال: "gid":123456789  أو  gid=123456789
-                const gidMatches = [...html.matchAll(/"gid":(\d+)/g)];
-                const nameGidMatches = [...html.matchAll(/"name":"([^"]+)","id":"([^"]+)"/g)];
+        const allSubs = (categories || []).flatMap(c => c.subitems || []);
+        const matchedSub = allSubs.find(s => s.sheetId === band_sheet);
 
-                // جرّب نستخرج الـ gid بتاع Sheet2 تحديداً
-                // البحث في النص عن Sheet2 أو ورقة2 وأقرب gid ليها
-                const sheet2Regex = /gid[=:](\d+)[^}]*?"[^"]*(?:sheet2|ورقة\s*2|sheet\s*2)[^"]*"/gi;
-                const reverseRegex = /"[^"]*(?:sheet2|ورقة\s*2|sheet\s*2)[^"]*"[^}]*?gid[=:](\d+)/gi;
-
-                let sheet2Gid = null;
-
-                // طريقة أبسط: ابحث عن كل الـ gids بالترتيب
-                const allGids = [...html.matchAll(/[?&]gid=(\d+)/g)]
-                    .map(m => m[1])
-                    .filter((v, i, a) => a.indexOf(v) === i); // unique
-
-                // أضف الـ gid التاني بالترتيب كأرجح مكان لـ Sheet2
-                if (allGids.length >= 2) sheet2Gid = allGids[1];
-
-                // رتّب: Sheet2 Gid أول، ثم باقي الـ gids، ثم أرقام ثابتة كـ fallback
-                if (sheet2Gid) orderedGids.push(sheet2Gid);
-                allGids.forEach(g => { if (g !== sheet2Gid) orderedGids.push(g); });
-            }
-        } catch(_) {}
-
-        // أضف fallback أرقام ثابتة في النهاية
-        ['0','1','2','3','4','5','6','7','8','9'].forEach(g => {
-            if (!orderedGids.includes(g)) orderedGids.push(g);
-        });
-
-        // ── الخطوة 2: جرّب كل gid ──
-        let found = false;
-        for (const gid of orderedGids) {
-            try {
-                const tryUrl = `https://docs.google.com/spreadsheets/d/${band_sheet}/export?format=csv&gid=${gid}`;
-                const tryRes = await fetch(tryUrl);
-                if (!tryRes.ok) continue;
-                const tryCsv = await tryRes.text();
-                if (tryCsv.trim().startsWith('<')) continue; // HTML = مش صح
-
-                const firstLine = tryCsv.split('\n')[0] || '';
-                const cellA1    = firstLine.split(',')[0].replace(/^"|"$/g, '').trim();
-
-                if (cellA1.startsWith('https://script.google.com')) {
-                    scriptUrl = cellA1;
-                    found = true;
-                    break;
-                }
-            } catch(_) { continue; }
+        if (matchedSub && matchedSub.scriptUrl) {
+            scriptUrl = matchedSub.scriptUrl.trim();
         }
 
-        if (!found || !scriptUrl) {
+        if (!scriptUrl) {
             throw new Error(
                 'لم يتم العثور على رابط السكريبت — تأكد من:\n' +
-                '1. الشيت مشارك للعموم (Anyone with link → Viewer)\n' +
-                '2. رابط Apps Script موجود في الخلية A1 في Sheet2\n' +
-                '3. الرابط يبدأ بـ https://script.google.com'
+                '1. فتح الإعدادات ⚙️ ← دبل كليك على البند الفرعي في السايدبار\n' +
+                '2. إدخال رابط Apps Script في حقل "رابط سكريبت تسجيل الكمية - المعدات"\n' +
+                '3. تصدير categories.json ⬇ وإعادة رفعه'
             );
         }
     } catch (fetchErr) {
@@ -617,9 +625,6 @@ async function eqSubmitForm() {
         btn.textContent = '💾 حفظ في السجل';
         return;
     }
-
-    btn.textContent = '⏳ جاري الحفظ...';
-    eqShowFeedback('⏳ جاري إرسال البيانات...', 'loading');
 
     const payload = { group_name, cat_name, element_id, element_name, item_name, contractor, date, done_qty, equipments };
 
