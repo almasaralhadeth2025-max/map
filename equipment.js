@@ -1606,7 +1606,7 @@ function _eqShowCumulCurrentBadge(total, done) {
            <span>المنفذ: <strong style="color:rgba(39,200,100,0.9);">${d.toLocaleString('en-US')}</strong></span>
            <span>المتبقي: <strong style="color:rgba(91,173,223,0.9);">${r.toLocaleString('en-US')}</strong></span>`
         : '';
-
+}
 /* ════════════════════════════════════════════════════
    Band Picker للتبويب التراكمي
    ════════════════════════════════════════════════════ */
