@@ -1791,4 +1791,4 @@ window.eqSubmitForm = function() {
     } else {
         _origEqSubmitForm_cumul();
     }
-};
+}
