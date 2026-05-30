@@ -1317,6 +1317,8 @@ function eqClearCumulElement() {
     }
     const lbl = document.getElementById('eqfc_band_label');
     if (lbl) { lbl.textContent = '-- اختر البند --'; lbl.style.color = ''; }
+    const badge = document.getElementById('eqfc_current_badge');
+    if (badge) badge.style.display = 'none';
 }
 
 /* ════════════════════════════════════════════════════
@@ -1528,7 +1530,82 @@ function eqSelectCumulElement(id, name) {
     const group = getGroupForSub(matchedSub.id);
     document.getElementById('eqfc_group_name').value = group ? (group.name || '—') : '—';
     document.getElementById('eqfc_group_id').value   = group ? (group.id   || '')  : '';
+
+    // ── جلب الكميات الحالية من allData وملء الخانتين ──
+    _eqFillCumulQtys(id, matchedSub.sheetId);
 }
+
+/* ── جلب TOTAL-QTY و DONE-QTY من allData للعنصر المحدد ── */
+function _eqFillCumulQtys(elementId, sheetId) {
+    const totalInp = document.getElementById('eqfc_total_qty');
+    const doneInp  = document.getElementById('eqfc_cumul_qty');
+    if (!totalInp || !doneInp) return;
+
+    // أولاً: ابحث في allData المحملة في الذاكرة
+    const sheetData = allData[sheetId];
+    if (sheetData) {
+        const row = sheetData[elementId];
+        if (row) {
+            const total = row['TOTAL-QTY'] || row['TOTAL_QTY'] || '';
+            const done  = row['DONE-QTY']  || row['DONE_QTY']  || '';
+            if (total !== '' && total !== undefined) totalInp.value = parseFloat(total) || '';
+            if (done  !== '' && done  !== undefined) doneInp.value  = parseFloat(done)  || '';
+            _eqShowCumulCurrentBadge(total, done);
+            return;
+        }
+    }
+
+    // ثانياً: لو الشيت مش محمل في allData، اجلبه من Google Sheets مباشرة
+    if (!sheetId) return;
+    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`;
+    fetch(url)
+        .then(r => r.text())
+        .then(csv => {
+            const lines = csv.split('\n').filter(l => l.trim());
+            if (lines.length < 2) return;
+            const headers = lines[0].split(',').map(h => h.trim().toUpperCase());
+            const idIdx    = headers.indexOf('ID');
+            const totalIdx = headers.indexOf('TOTAL-QTY');
+            const doneIdx  = headers.indexOf('DONE-QTY');
+            if (idIdx === -1) return;
+            for (let i = 1; i < lines.length; i++) {
+                const vals = lines[i].split(',').map(v => v.trim());
+                if ((vals[idIdx] || '').trim() === elementId) {
+                    const total = totalIdx !== -1 ? (vals[totalIdx] || '') : '';
+                    const done  = doneIdx  !== -1 ? (vals[doneIdx]  || '') : '';
+                    if (total !== '') totalInp.value = parseFloat(total) || '';
+                    if (done  !== '') doneInp.value  = parseFloat(done)  || '';
+                    _eqShowCumulCurrentBadge(total, done);
+                    break;
+                }
+            }
+        })
+        .catch(() => {}); // صامت لو فشل الجلب
+}
+
+/* ── بادج يظهر القيم الحالية كـ hint للمستخدم ── */
+function _eqShowCumulCurrentBadge(total, done) {
+    let badge = document.getElementById('eqfc_current_badge');
+    if (!badge) {
+        // أنشئ البادج تحت خانة الكمية الإجمالية
+        const container = document.getElementById('eqfc_total_qty')?.closest('.eq-form-field')?.parentElement;
+        if (!container) return;
+        badge = document.createElement('div');
+        badge.id = 'eqfc_current_badge';
+        badge.style.cssText = 'grid-column:1/-1;padding:8px 12px;background:rgba(255,200,66,0.08);border:1px solid rgba(255,200,66,0.2);border-radius:8px;font-size:11px;font-family:\'Cairo\',sans-serif;color:rgba(255,255,255,0.55);display:flex;gap:16px;align-items:center;margin-top:-6px;';
+        container.appendChild(badge);
+    }
+    const t = parseFloat(total) || 0;
+    const d = parseFloat(done)  || 0;
+    const r = t - d;
+    const hasData = t > 0 || d > 0;
+    badge.style.display = hasData ? 'flex' : 'none';
+    badge.innerHTML = hasData
+        ? `<span style="opacity:0.7;">📊 القيم الحالية في الشيت:</span>
+           <span>الإجمالي: <strong style="color:rgba(255,200,66,0.9);">${t.toLocaleString('en-US')}</strong></span>
+           <span>المنفذ: <strong style="color:rgba(39,200,100,0.9);">${d.toLocaleString('en-US')}</strong></span>
+           <span>المتبقي: <strong style="color:rgba(91,173,223,0.9);">${r.toLocaleString('en-US')}</strong></span>`
+        : '';
 
 /* ════════════════════════════════════════════════════
    Band Picker للتبويب التراكمي
@@ -1596,6 +1673,8 @@ function eqResetCumulForm() {
     if (btn) { btn.style.borderColor = ''; btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = ''; btn.title = ''; }
     const fb = document.getElementById('eqfc_feedback');
     if (fb) { fb.style.display = 'none'; fb.className = ''; }
+    const badge = document.getElementById('eqfc_current_badge');
+    if (badge) badge.style.display = 'none';
 }
 
 /* ════════════════════════════════════════════════════
