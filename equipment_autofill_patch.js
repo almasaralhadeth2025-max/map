@@ -9,7 +9,7 @@ var _afRows = [];
 async function afLoadSheet2(sheetId) {
     _afRows = [];
     try {
-        var url = 'https://docs.google.com/spreadsheets/d/' + sheetId + '/export?format=csv&sheet=Sheet2';
+        var url = 'https://docs.google.com/spreadsheets/d/' + sheetId + '/export?format=csv&gid=987650458';
         var r   = await fetch(url);
         var csv = await r.text();
         if (csv.trim().startsWith('<')) { console.warn('[autofill] not public'); return; }
