@@ -43,7 +43,7 @@ async function afFetchSheet2() {
     try {
         /* Sheet2 = gid=1 في معظم الحالات
            لو الشيت رفض، جرب: &sheet=Sheet2 بدل gid=1  */
-        const url = `https://docs.google.com/spreadsheets/d/${EQ_REG_SHEET_ID}/export?format=csv&gid=1`;
+        const url = `https://docs.google.com/spreadsheets/d/${EQ_REG_SHEET_ID}/export?format=csv&gid=0`;
         const r   = await fetch(url);
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const csv = await r.text();
