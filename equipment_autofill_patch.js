@@ -109,8 +109,10 @@ async function afFetchSheet2ForSubitem(sheetId) {
        بعض الشيتات Sheet2 gid تختلف من شيت لآخر
        نجرب sheet=Sheet2 كأسلوب أموثق                */
     var attempts = [
-
-        `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=1`,
+     `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=1`,
+     `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`,
+     `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&sheet=Sheet2`,
+   ];
     ];
 
     var parsed = null;
