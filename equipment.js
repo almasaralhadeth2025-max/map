@@ -626,8 +626,7 @@ async function eqSubmitForm() {
         return;
     }
 
-    const payload = { group_name, cat_name, element_id, element_name, item_name, contractor, date, done_qty, equipments };
-
+    const payload = { form_type: 'daily', group_name, cat_name, element_id, element_name, item_name, contractor, date, done_qty, equipments };
     try {
         const r = await fetch(scriptUrl, {
             method: 'POST',
