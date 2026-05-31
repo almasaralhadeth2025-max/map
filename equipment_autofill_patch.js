@@ -1,5 +1,5 @@
 /* ====================================================
-   AUTOFILL PATCH — equipment_autofill_patch.js
+   AUTOFILL PATCH — equipment_autofill_patch.js  (v2 – Drive Photo)
    يُضاف بعد equipment.js و equipment_camera_patch.js
    ==================================================== */
 
@@ -17,7 +17,6 @@ async function afLoadSheet2(sheetId) {
         var lines = csv.split('\n').filter(function(l){ return l.trim(); });
         if (lines.length < 2) return;
 
-        /* نتخطى الهيدر (السطر الأول) ونحفظ باقي الصفوف */
         for (var i = 1; i < lines.length; i++) {
             var cols = lines[i].split(',').map(function(v){ return v.trim(); });
             _afRows.push(cols);
@@ -82,16 +81,67 @@ function afFill(elementId, date) {
     var doneInp = document.getElementById('eqf_done_qty');
     if (doneInp && found[5]) doneInp.value = found[5].trim();
 
-    /* col 6 = PHOTO */
+    /* ══════════════════════════════════════════════
+       col 6 = PHOTO — عرض صورة Drive إن وُجدت
+       القيمة إما:
+         - رابط Drive كامل (https://drive.google.com/...)
+         - صيغة HYPERLINK("url","📷 صورة")
+         - كلمة "صورة" (fallback قديم)
+    ══════════════════════════════════════════════ */
     var photoVal = (found[6]||'').trim();
+
     if (photoVal) {
+        /* استخرج الـ URL من صيغة HYPERLINK لو كانت موجودة */
+        var driveUrl = _afExtractDriveUrl(photoVal);
+
+        /* تأكد إن قسم الكاميرا محقون */
+        if (window.eqInjectCameraSection) eqInjectCameraSection();
+
         var wrap = document.getElementById('eqf_photo_preview_wrap');
-        if (wrap && !document.getElementById('af_photo_badge')) {
-            var pb = document.createElement('div');
-            pb.id = 'af_photo_badge';
-            pb.style.cssText = 'display:flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(245,200,66,0.12);border:1px solid rgba(245,200,66,0.35);border-radius:8px;font-size:11px;font-weight:700;color:#f5c842;font-family:Cairo,sans-serif;margin-top:6px;';
-            pb.textContent = '📷 يوجد صورة مسجلة — التقط جديدة لاستبدالها';
-            wrap.appendChild(pb);
+
+        if (driveUrl) {
+            /* ── عرض الصورة من Drive URL ── */
+            /* حوّل رابط view إلى رابط thumbnail مباشر */
+            var directUrl = _afBuildDirectUrl(driveUrl);
+            /* استخدم الدالة من camera patch */
+            if (window.eqShowPhotoFromDriveUrl) {
+                eqShowPhotoFromDriveUrl(driveUrl, directUrl);
+            } else {
+                /* fallback manual */
+                _afShowPhotoFallback(driveUrl, directUrl);
+            }
+
+            /* بادج "صورة محفوظة" */
+            if (wrap && !document.getElementById('af_photo_badge')) {
+                var pb = document.createElement('div');
+                pb.id = 'af_photo_badge';
+                pb.style.cssText = [
+                    'display:flex','align-items:center','gap:6px',
+                    'padding:6px 12px',
+                    'background:rgba(33,150,243,0.12)',
+                    'border:1px solid rgba(33,150,243,0.35)',
+                    'border-radius:8px','font-size:11px','font-weight:700',
+                    'color:#5baddf','font-family:Cairo,sans-serif','margin-top:4px'
+                ].join(';');
+                pb.innerHTML = '📷 <span>صورة محفوظة من Drive — التقط جديدة لاستبدالها</span>';
+                wrap.appendChild(pb);
+            }
+        } else {
+            /* fallback: كلمة "صورة" فقط بدون URL */
+            if (wrap && !document.getElementById('af_photo_badge')) {
+                var pb2 = document.createElement('div');
+                pb2.id = 'af_photo_badge';
+                pb2.style.cssText = [
+                    'display:flex','align-items:center','gap:6px',
+                    'padding:6px 12px',
+                    'background:rgba(245,200,66,0.12)',
+                    'border:1px solid rgba(245,200,66,0.35)',
+                    'border-radius:8px','font-size:11px','font-weight:700',
+                    'color:#f5c842','font-family:Cairo,sans-serif','margin-top:4px'
+                ].join(';');
+                pb2.textContent = '📷 يوجد صورة مسجلة — التقط جديدة لاستبدالها';
+                wrap.appendChild(pb2);
+            }
         }
     }
 
@@ -136,10 +186,70 @@ function afFill(elementId, date) {
     if (fb) {
         var badge = document.createElement('div');
         badge.id = 'af_loaded_badge';
-        badge.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(245,200,66,0.1);border:1px solid rgba(245,200,66,0.4);border-radius:10px;margin-bottom:10px;font-size:12px;font-weight:700;color:#f5c842;font-family:Cairo,sans-serif;';
-        badge.innerHTML = '<span>📋</span><span style="flex:1;">تم تحميل سجل موجود — يمكنك تعديله وإعادة الحفظ</span>' +
+        badge.style.cssText = [
+            'display:flex','align-items:center','gap:8px',
+            'padding:10px 14px',
+            'background:rgba(245,200,66,0.1)',
+            'border:1px solid rgba(245,200,66,0.4)',
+            'border-radius:10px','margin-bottom:10px',
+            'font-size:12px','font-weight:700','color:#f5c842',
+            'font-family:Cairo,sans-serif'
+        ].join(';');
+        badge.innerHTML = '<span>📋</span>' +
+            '<span style="flex:1;">تم تحميل سجل موجود — يمكنك تعديله وإعادة الحفظ</span>' +
             '<button onclick="afClearBadge()" style="background:none;border:1px solid rgba(245,200,66,0.4);color:rgba(245,200,66,0.7);padding:3px 9px;border-radius:6px;font-size:10px;font-weight:700;font-family:Cairo,sans-serif;cursor:pointer;">✕</button>';
         fb.parentElement.insertBefore(badge, fb);
+    }
+}
+
+/* ── استخراج Drive URL من قيمة الخلية ── */
+function _afExtractDriveUrl(val) {
+    if (!val) return null;
+    /* صيغة HYPERLINK("url","label") */
+    var hMatch = val.match(/HYPERLINK\s*\(\s*"([^"]+)"/i);
+    if (hMatch) return hMatch[1];
+    /* رابط Drive مباشر */
+    if (val.startsWith('https://drive.google.com') || val.startsWith('https://docs.google.com')) {
+        return val;
+    }
+    return null;
+}
+
+/* ── بناء رابط thumbnail مباشر من رابط Drive ── */
+function _afBuildDirectUrl(viewUrl) {
+    if (!viewUrl) return null;
+    /* استخرج file ID */
+    var m = viewUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (m) {
+        return 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w800';
+    }
+    /* لو كان بصيغة id= مباشرة */
+    var m2 = viewUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (m2) {
+        return 'https://drive.google.com/thumbnail?id=' + m2[1] + '&sz=w800';
+    }
+    return null;
+}
+
+/* ── fallback لعرض الصورة لو camera patch غير محمل ── */
+function _afShowPhotoFallback(viewUrl, directUrl) {
+    var ph  = document.getElementById('eqf_photo_placeholder');
+    var img = document.getElementById('eqf_photo_preview_img');
+    var linkEl = document.getElementById('eqf_photo_drive_link');
+
+    if (ph) ph.style.display = 'none';
+
+    if (img && directUrl) {
+        img.src = directUrl;
+        img.style.display = 'block';
+        img.onerror = function() { img.style.display = 'none'; };
+    }
+
+    if (linkEl && viewUrl) {
+        linkEl.href = viewUrl;
+        linkEl.style.display = 'inline-flex';
+        linkEl.style.alignItems = 'center';
+        linkEl.style.gap = '4px';
     }
 }
 
@@ -157,6 +267,9 @@ async function afCheck() {
     var sheetId   = (document.getElementById('eqf_band_sheet')?.value  || '').trim();
 
     afClearBadge();
+    /* امسح الصورة المعروضة حالياً عند التحقق من سجل جديد */
+    if (window.eqClearPhoto) eqClearPhoto();
+
     if (!elementId || !date || !sheetId) return;
 
     await afLoadSheet2(sheetId);
