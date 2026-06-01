@@ -1,5 +1,8 @@
 /* ====================================================
-   AUTOFILL PATCH — equipment_autofill_patch.js  (v3)
+   AUTOFILL PATCH — equipment_autofill_patch.js  (v4)
+   الفرق عن v3: حذف عمود PHOTO (hyperlink) — الصورة تُقرأ من col[6] مباشرة كـ URL خام
+   هيكل Sheet2: [0]element_id [1]element_name [2]item_name [3]contractor
+                [4]date [5]done_qty [6]PHOTO_URL [7]type1 [8]count1 ...
    ==================================================== */
 
 var _afRows = [];
@@ -8,7 +11,6 @@ var _afRows = [];
 async function afLoadSheet2(sheetId) {
     _afRows = [];
     try {
-        /* gid=987650458 هو Sheet2 — غيّره لو اختلف */
         var url = 'https://docs.google.com/spreadsheets/d/' + sheetId + '/export?format=csv&gid=987650458';
         var r   = await fetch(url);
         var csv = await r.text();
@@ -17,8 +19,6 @@ async function afLoadSheet2(sheetId) {
         var lines = csv.split('\n').filter(function(l){ return l.trim(); });
         if (lines.length < 2) return;
 
-        /* نحتاج parser يتعامل مع الحقول المقتبسة (quoted fields)
-           لأن Google Sheets يُصدر الـ HYPERLINK كـ URL مقتبس */
         for (var i = 1; i < lines.length; i++) {
             _afRows.push(_afParseCSVLine(lines[i]));
         }
@@ -47,30 +47,6 @@ function _afParseCSVLine(line) {
     }
     result.push(cur.trim());
     return result;
-}
-
-/* ── استخراج Drive URL من أي صيغة ── */
-function _afExtractDriveUrl(val) {
-    if (!val) return null;
-    val = val.trim();
-
-    /* 1. رابط Drive مباشر */
-    if (val.startsWith('https://drive.google.com') ||
-        val.startsWith('https://docs.google.com')) {
-        return val;
-    }
-
-    /* 2. صيغة =HYPERLINK("url","label") — بعد إزالة الاقتباسات */
-    var hMatch = val.match(/HYPERLINK\s*\(\s*"([^"]+)"/i);
-    if (hMatch) return hMatch[1];
-
-    /* 3. لو الـ CSV صدّر الـ URL بدون https */
-    if (val.includes('drive.google.com')) {
-        var m = val.match(/(https?:\/\/[^\s",]+)/);
-        if (m) return m[1];
-    }
-
-    return null;
 }
 
 /* ── بناء thumbnail URL من Drive view URL ── */
@@ -136,28 +112,19 @@ function afFill(elementId, date) {
     if (doneInp && found[5]) doneInp.value = found[5].trim();
 
     /* ══════════════════════════════════════════
-       col 6 = PHOTO
+       col 6 = PHOTO_URL — URL خام مباشرة
     ══════════════════════════════════════════ */
-    /* col 6 = PHOTO (hyperlink display), col 7 = PHOTO_URL (raw url) */
-   var photoVal = (found[6]||'').trim();
-   var photoUrl = photoVal;  // الـ URL الخام
-   console.log('[autofill] photo col raw:', photoVal, '| url col:', photoUrl);
-   
-   if (photoUrl || photoVal) {
-       var driveUrl = photoUrl || _afExtractDriveUrl(photoVal);
-       console.log('[autofill] driveUrl:', driveUrl);
-   
-       if (window.eqInjectCameraSection) eqInjectCameraSection();
-   
-       if (driveUrl) {
-           var directUrl = _afBuildDirectUrl(driveUrl);
-           _afDisplayPhoto(driveUrl, directUrl);
-       } else {
-           _afShowPhotoBadge('📷 يوجد صورة مسجلة — التقط جديدة لاستبدالها', '#f5c842', 'rgba(245,200,66,0.12)', 'rgba(245,200,66,0.35)');
-       }
-   }
+    var photoUrl = (found[6]||'').trim();
+    console.log('[autofill] PHOTO_URL col[6]:', photoUrl);
 
-    /* col 7+ = معدات */
+    if (photoUrl) {
+        if (window.eqInjectCameraSection) eqInjectCameraSection();
+
+        var directUrl = _afBuildDirectUrl(photoUrl);
+        _afDisplayPhoto(photoUrl, directUrl);
+    }
+
+    /* col 7+ = معدات (انتقل من col8 إلى col7 بسبب حذف عمود PHOTO) */
     var pairs = [];
     for (var j = 7; j+1 < found.length; j += 2) {
         var type  = (found[j]  ||'').trim();
@@ -217,7 +184,6 @@ function afFill(elementId, date) {
 
 /* ── عرض الصورة من Drive في مربع الكاميرا ── */
 function _afDisplayPhoto(viewUrl, directUrl) {
-    /* استخدم دالة camera patch لو متاحة */
     if (window.eqShowPhotoFromDriveUrl) {
         eqShowPhotoFromDriveUrl(viewUrl, directUrl);
         _afShowPhotoBadge(
@@ -227,15 +193,14 @@ function _afDisplayPhoto(viewUrl, directUrl) {
         return;
     }
 
-    /* fallback يدوي لو camera patch مش محمل */
-    var ph    = document.getElementById('eqf_photo_placeholder');
-    var img   = document.getElementById('eqf_photo_preview_img');
-    var link  = document.getElementById('eqf_photo_drive_link');
-    var wrap  = document.getElementById('eqf_photo_preview_wrap');
+    /* fallback يدوي */
+    var ph   = document.getElementById('eqf_photo_placeholder');
+    var img  = document.getElementById('eqf_photo_preview_img');
+    var link = document.getElementById('eqf_photo_drive_link');
+    var wrap = document.getElementById('eqf_photo_preview_wrap');
 
     if (ph) ph.style.display = 'none';
 
-    /* ── إنشاء عناصر لو مش موجودة (لو camera section مش محقون) ── */
     if (!img && wrap) {
         img = document.createElement('img');
         img.id = 'eqf_photo_preview_img';
