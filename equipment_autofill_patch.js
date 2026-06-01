@@ -140,7 +140,7 @@ function afFill(elementId, date) {
     ══════════════════════════════════════════ */
     /* col 6 = PHOTO (hyperlink display), col 7 = PHOTO_URL (raw url) */
    var photoVal = (found[6]||'').trim();
-   var photoUrl = (found[7]||'').trim(); // الـ URL الخام
+   var photoUrl = photoVal;  // الـ URL الخام
    console.log('[autofill] photo col raw:', photoVal, '| url col:', photoUrl);
    
    if (photoUrl || photoVal) {
