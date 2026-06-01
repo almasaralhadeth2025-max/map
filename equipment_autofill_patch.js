@@ -138,28 +138,24 @@ function afFill(elementId, date) {
     /* ══════════════════════════════════════════
        col 6 = PHOTO
     ══════════════════════════════════════════ */
-    var photoVal = (found[6]||'').trim();
-    console.log('[autofill] photo col raw value:', photoVal);
-
-    if (photoVal) {
-        var driveUrl = _afExtractDriveUrl(photoVal);
-        console.log('[autofill] extracted driveUrl:', driveUrl);
-
-        /* تأكد إن قسم الكاميرا موجود */
-        if (window.eqInjectCameraSection) eqInjectCameraSection();
-
-        if (driveUrl) {
-            var directUrl = _afBuildDirectUrl(driveUrl);
-            console.log('[autofill] directUrl (thumbnail):', directUrl);
-
-            /* ── عرض الصورة ── */
-            _afDisplayPhoto(driveUrl, directUrl);
-
-        } else {
-            /* كلمة "صورة" فقط بدون URL */
-            _afShowPhotoBadge('📷 يوجد صورة مسجلة — التقط جديدة لاستبدالها', '#f5c842', 'rgba(245,200,66,0.12)', 'rgba(245,200,66,0.35)');
-        }
-    }
+    /* col 6 = PHOTO (hyperlink display), col 7 = PHOTO_URL (raw url) */
+   var photoVal = (found[6]||'').trim();
+   var photoUrl = (found[7]||'').trim(); // الـ URL الخام
+   console.log('[autofill] photo col raw:', photoVal, '| url col:', photoUrl);
+   
+   if (photoUrl || photoVal) {
+       var driveUrl = photoUrl || _afExtractDriveUrl(photoVal);
+       console.log('[autofill] driveUrl:', driveUrl);
+   
+       if (window.eqInjectCameraSection) eqInjectCameraSection();
+   
+       if (driveUrl) {
+           var directUrl = _afBuildDirectUrl(driveUrl);
+           _afDisplayPhoto(driveUrl, directUrl);
+       } else {
+           _afShowPhotoBadge('📷 يوجد صورة مسجلة — التقط جديدة لاستبدالها', '#f5c842', 'rgba(245,200,66,0.12)', 'rgba(245,200,66,0.35)');
+       }
+   }
 
     /* col 7+ = معدات */
     var pairs = [];
