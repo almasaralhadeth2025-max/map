@@ -135,24 +135,17 @@ function afFill(elementId, date) {
     var doneInp = document.getElementById('eqf_done_qty');
     if (doneInp && found[5]) doneInp.value = found[5].trim();
 
-    /* ══════════════════════════════════════════
-       col 6 = PHOTO
     ══════════════════════════════════════════ */
-    /* col 6 = PHOTO (hyperlink display), col 7 = PHOTO_URL (raw url) */
+   /* col 6 = photo_url */
    var photoVal = (found[6]||'').trim();
-   var photoUrl = (found[7]||'').trim(); // الـ URL الخام
-   console.log('[autofill] photo col raw:', photoVal, '| url col:', photoUrl);
+   console.log('[autofill] photo_url:', photoVal);
    
-   if (photoUrl || photoVal) {
-       var driveUrl = photoUrl || _afExtractDriveUrl(photoVal);
-       console.log('[autofill] driveUrl:', driveUrl);
-   
+   if (photoVal) {
        if (window.eqInjectCameraSection) eqInjectCameraSection();
-   
-       if (driveUrl) {
-           var directUrl = _afBuildDirectUrl(driveUrl);
-           _afDisplayPhoto(driveUrl, directUrl);
-       } else {
+       var driveUrl = _afExtractDriveUrl(photoVal) || photoVal;
+       var directUrl = _afBuildDirectUrl(driveUrl);
+       _afDisplayPhoto(driveUrl, directUrl);
+   } else {
            _afShowPhotoBadge('📷 يوجد صورة مسجلة — التقط جديدة لاستبدالها', '#f5c842', 'rgba(245,200,66,0.12)', 'rgba(245,200,66,0.35)');
        }
    }
