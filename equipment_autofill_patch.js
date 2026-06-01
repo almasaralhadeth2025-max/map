@@ -139,9 +139,20 @@ function afFill(elementId, date) {
             window.eqFormEquipmentCount = 0;
             pairs.forEach(function(pair) {
                 if (window.eqAddEquipmentRow) window.eqAddEquipmentRow();
-                var id      = 'eqrow_' + window.eqFormEquipmentCount;
-                var typeSel = document.getElementById(id+'_type');
-                var cntInp  = document.getElementById(id+'_count');
+
+                /* ── نجيب آخر صف اتضاف فعلياً من الـ DOM ── */
+                var allSelects = container.querySelectorAll('select[id$="_type"]');
+                var typeSel    = allSelects.length ? allSelects[allSelects.length - 1] : null;
+                var allInputs  = container.querySelectorAll('input[id$="_count"]');
+                var cntInp     = allInputs.length  ? allInputs[allInputs.length - 1]  : null;
+
+                /* fallback: لو ما لقى بالـ DOM يجرب العداد */
+                if (!typeSel) {
+                    var fbId = 'eqrow_' + window.eqFormEquipmentCount;
+                    typeSel  = document.getElementById(fbId+'_type');
+                    cntInp   = document.getElementById(fbId+'_count');
+                }
+
                 if (typeSel) {
                     var ex = false;
                     for (var x=0; x<typeSel.options.length; x++)
@@ -152,8 +163,12 @@ function afFill(elementId, date) {
                         typeSel.appendChild(o);
                     }
                     typeSel.value = pair.type;
+                    console.log('[autofill] eq row set type:', pair.type, '→', typeSel.id);
                 }
-                if (cntInp) cntInp.value = pair.count;
+                if (cntInp) {
+                    cntInp.value = pair.count;
+                    console.log('[autofill] eq row set count:', pair.count, '→', cntInp.id);
+                }
             });
         }
     }
