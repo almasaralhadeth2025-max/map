@@ -116,6 +116,15 @@ function afFill(elementId, date) {
        col 6 = PHOTO_URL — URL خام مباشرة
     ══════════════════════════════════════════ */
     var photoUrl = (found[6]||'').trim();
+   // ── حفظ الـ URL القديم في hidden input عشان يُرسل لو ما تغيّرتش الصورة ──
+   var oldPhotoInp = document.getElementById('eqf_existing_photo_url');
+   if (!oldPhotoInp) {
+       oldPhotoInp = document.createElement('input');
+       oldPhotoInp.type = 'hidden';
+       oldPhotoInp.id   = 'eqf_existing_photo_url';
+       document.getElementById('eqf_feedback').parentElement.appendChild(oldPhotoInp);
+   }
+   oldPhotoInp.value = photoUrl;
     console.log('[autofill] PHOTO_URL col[6]:', photoUrl);
 
     if (photoUrl) {
