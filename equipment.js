@@ -529,6 +529,9 @@ function eqResetForm() {
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('eqf_date').value = today;
     const doneQty = document.getElementById('eqf_done_qty');
+   const rowIdx = document.getElementById('eqf_row_index');
+   if (rowIdx) rowIdx.value = '';
+   window._afFoundRowIndex = null;
     if (doneQty) doneQty.value = '';
     document.getElementById('eqf_equipments_container').innerHTML = '';
     eqFormEquipmentCount = 0;
@@ -625,8 +628,13 @@ async function eqSubmitForm() {
         btn.textContent = '💾 حفظ في السجل';
         return;
     }
-
-    const payload = { form_type: 'daily', group_name, cat_name, element_id, element_name, item_name, contractor, date, done_qty, equipments };
+    const row_index = parseInt(document.getElementById('eqf_row_index')?.value) || null;
+    const payload = { 
+    form_type: 'daily', 
+    row_index,          // ← أضف هذا
+    group_name, cat_name, element_id, element_name, 
+    item_name, contractor, date, done_qty, equipments 
+};
     try {
         const r = await fetch(scriptUrl, {
             method: 'POST',
