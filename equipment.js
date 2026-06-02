@@ -630,16 +630,17 @@ async function eqSubmitForm() {
         btn.textContent = '💾 حفظ في السجل';
         return;
     }
-    const newPhotoUrl      = (document.getElementById('eqf_photo_url')?.value      || '').trim();
+   const row_index        = parseInt(document.getElementById('eqf_row_index')?.value) || null;
+   const newPhotoUrl      = (document.getElementById('eqf_photo_url')?.value      || '').trim();
    const existingPhotoUrl = (document.getElementById('eqf_existing_photo_url')?.value || '').trim();
-   const photo_url        = newPhotoUrl || existingPhotoUrl; // الجديد يأخذ أولوية، وإلا القديم
-    const payload = { 
-    form_type: 'daily', 
-    row_index,
-    group_name, cat_name, element_id, element_name, 
-    item_name, contractor, date, done_qty, equipments,
-    photo_url   // ← أضف هذا
-};
+   const photo_url        = newPhotoUrl || existingPhotoUrl;
+   const payload = { 
+       form_type: 'daily', 
+       row_index,
+       group_name, cat_name, element_id, element_name, 
+       item_name, contractor, date, done_qty, equipments,
+       photo_url
+   };
     try {
         const r = await fetch(scriptUrl, {
             method: 'POST',
