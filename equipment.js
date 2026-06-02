@@ -667,11 +667,13 @@ async function eqSubmitForm() {
         return;
     }
     const row_index = parseInt(document.getElementById('eqf_row_index')?.value) || null;
+    const added_by = (currentUser && currentUser.email) ? currentUser.email : (currentUser && currentUser.name ? currentUser.name : '');
     const payload = { 
     form_type: 'daily', 
-    row_index,          // ← أضف هذا
+    row_index,
     group_name, cat_name, element_id, element_name, 
-    item_name, contractor, date, done_qty, equipments 
+    item_name, contractor, date, done_qty, equipments,
+    added_by   // email أو اسم المستخدم الذي أضاف السجل
 };
     try {
         const r = await fetch(scriptUrl, {
