@@ -81,8 +81,8 @@ function afFill(elementId, date) {
         var row = _afRows[i];
         if ((row[0]||'').trim() === elementId && norm((row[4]||'').trim()) === target) {
             found = row;
+            window._afFoundRowIndex = i + 2; // +2: صف الهيدر (1) + index 
             break;
-            window._afFoundRowIndex = i + 2; // +2: صف الهيدر (1) + index يبدأ من 0
         }
     }
 
