@@ -532,6 +532,8 @@ function eqResetForm() {
    const rowIdx = document.getElementById('eqf_row_index');
    if (rowIdx) rowIdx.value = '';
    window._afFoundRowIndex = null;
+   const oldPhoto = document.getElementById('eqf_existing_photo_url');
+   if (oldPhoto) oldPhoto.value = '';
     if (doneQty) doneQty.value = '';
     document.getElementById('eqf_equipments_container').innerHTML = '';
     eqFormEquipmentCount = 0;
@@ -628,12 +630,15 @@ async function eqSubmitForm() {
         btn.textContent = '💾 حفظ في السجل';
         return;
     }
-    const row_index = parseInt(document.getElementById('eqf_row_index')?.value) || null;
+    const newPhotoUrl      = (document.getElementById('eqf_photo_url')?.value      || '').trim();
+   const existingPhotoUrl = (document.getElementById('eqf_existing_photo_url')?.value || '').trim();
+   const photo_url        = newPhotoUrl || existingPhotoUrl; // الجديد يأخذ أولوية، وإلا القديم
     const payload = { 
     form_type: 'daily', 
-    row_index,          // ← أضف هذا
+    row_index,
     group_name, cat_name, element_id, element_name, 
-    item_name, contractor, date, done_qty, equipments 
+    item_name, contractor, date, done_qty, equipments,
+    photo_url   // ← أضف هذا
 };
     try {
         const r = await fetch(scriptUrl, {
