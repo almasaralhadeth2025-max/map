@@ -455,6 +455,27 @@ function eqSelectBand(name, sheetId, catName, catId) {
     eqCloseBandPicker();
 }
 
+/* ── Get all equipment types currently selected in existing rows ── */
+function eqGetUsedTypes() {
+    var used = new Set();
+    document.querySelectorAll('#eqf_equipments_container .eq-type-inp').forEach(function(sel) {
+        if (sel.value) used.add(sel.value);
+    });
+    return used;
+}
+
+/* ── Refresh all existing selects: hide used options (except own value) ── */
+function eqRefreshAllSelects() {
+    var used = eqGetUsedTypes();
+    document.querySelectorAll('#eqf_equipments_container .eq-type-inp').forEach(function(sel) {
+        var ownVal = sel.value;
+        Array.from(sel.options).forEach(function(opt) {
+            if (!opt.value) return; // placeholder — keep always
+            opt.hidden = (used.has(opt.value) && opt.value !== ownVal);
+        });
+    });
+}
+
 /* ── Add an equipment row ── */
 function eqAddEquipmentRow() {
     var container = document.getElementById('eqf_equipments_container');
@@ -467,13 +488,22 @@ function eqAddEquipmentRow() {
         return;
     }
 
+    // تحقق إن في أنواع متاحة لم تُختر بعد
+    var used = eqGetUsedTypes();
+    var available = equipmentTypes.filter(function(t) { return !used.has(t); });
+    if (!available.length) {
+        showAlert('⚠️ تم اختيار جميع أنواع المعدات المتاحة');
+        return;
+    }
+
     eqFormEquipmentCount++;
     var rowId = 'eqrow_' + eqFormEquipmentCount;
 
-    // Build select options — خلفية صلبة لضمان ظهور النص على كل الأجهزة
+    // Build select options — تخفي الأنواع المستخدمة مسبقاً
     var optionsHtml = '<option value="" disabled selected>-- اختر نوع المعدة --</option>' +
         equipmentTypes.map(function(t) {
-            return '<option value="' + t + '">' + t + '</option>';
+            var isUsed = used.has(t);
+            return '<option value="' + t + '"' + (isUsed ? ' hidden' : '') + '>' + t + '</option>';
         }).join('');
 
     var row = document.createElement('div');
@@ -487,14 +517,22 @@ function eqAddEquipmentRow() {
 
     container.appendChild(row);
 
+    // لما يغير الاختيار: حدّث كل الـ selects
     var sel = row.querySelector('.eq-type-inp');
-    if (sel) sel.focus();
+    if (sel) {
+        sel.addEventListener('change', function() {
+            eqRefreshAllSelects();
+        });
+        sel.focus();
+    }
 }
 /* ── Remove an equipment row ── */
 function eqRemoveEquipmentRow(rowId) {
     const row = document.getElementById(rowId);
     if (row) row.remove();
     eqShowEmptyHint();
+    // أعد إظهار المعدة المحذوفة في بقية الصفوف
+    eqRefreshAllSelects();
 }
 
 /* ── Show hint if no rows ── */
@@ -532,8 +570,6 @@ function eqResetForm() {
    const rowIdx = document.getElementById('eqf_row_index');
    if (rowIdx) rowIdx.value = '';
    window._afFoundRowIndex = null;
-   const oldPhoto = document.getElementById('eqf_existing_photo_url');
-   if (oldPhoto) oldPhoto.value = '';
     if (doneQty) doneQty.value = '';
     document.getElementById('eqf_equipments_container').innerHTML = '';
     eqFormEquipmentCount = 0;
@@ -630,17 +666,13 @@ async function eqSubmitForm() {
         btn.textContent = '💾 حفظ في السجل';
         return;
     }
-   const row_index        = parseInt(document.getElementById('eqf_row_index')?.value) || null;
-   const newPhotoUrl      = (document.getElementById('eqf_photo_url')?.value      || '').trim();
-   const existingPhotoUrl = (document.getElementById('eqf_existing_photo_url')?.value || '').trim();
-   const photo_url        = newPhotoUrl || existingPhotoUrl;
-   const payload = { 
-       form_type: 'daily', 
-       row_index,
-       group_name, cat_name, element_id, element_name, 
-       item_name, contractor, date, done_qty, equipments,
-       photo_url
-   };
+    const row_index = parseInt(document.getElementById('eqf_row_index')?.value) || null;
+    const payload = { 
+    form_type: 'daily', 
+    row_index,          // ← أضف هذا
+    group_name, cat_name, element_id, element_name, 
+    item_name, contractor, date, done_qty, equipments 
+};
     try {
         const r = await fetch(scriptUrl, {
             method: 'POST',
@@ -1072,14 +1104,24 @@ function saveEquipmentTypes() {
 }
 
 function refreshEquipmentDatalist() {
-    // أعد بناء كل الـ select الموجودة في نموذج التسجيل
+    // أعد بناء كل الـ select الموجودة في نموذج التسجيل مع مراعاة المعدات المختارة
+    var used = eqGetUsedTypes ? eqGetUsedTypes() : new Set();
     document.querySelectorAll('.eq-type-inp').forEach(function(sel) {
         var currentVal = sel.value;
         sel.innerHTML = '<option value="" disabled>-- اختر نوع المعدة --</option>' +
             equipmentTypes.map(function(t) {
-                return '<option value="' + t + '"' + (t === currentVal ? ' selected' : '') + '>' + t + '</option>';
+                var isUsed = used.has(t) && t !== currentVal;
+                return '<option value="' + t + '"' +
+                    (t === currentVal ? ' selected' : '') +
+                    (isUsed ? ' hidden' : '') +
+                    '>' + t + '</option>';
             }).join('');
         if (!equipmentTypes.includes(currentVal)) sel.value = '';
+        // ربط حدث التغيير إن لم يكن مربوطاً
+        if (!sel._eqChangeListenerAdded) {
+            sel._eqChangeListenerAdded = true;
+            sel.addEventListener('change', function() { eqRefreshAllSelects(); });
+        }
     });
 }
 
