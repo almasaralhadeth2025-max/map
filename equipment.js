@@ -668,12 +668,22 @@ async function eqSubmitForm() {
     }
     const row_index = parseInt(document.getElementById('eqf_row_index')?.value) || null;
     const added_by = (currentUser && currentUser.email) ? currentUser.email : (currentUser && currentUser.name ? currentUser.name : '');
+
+    // لو في تحديث لصف موجود ومافيش صورة جديدة، ابعت الـ URL القديمة من autofill
+    // السكريبت عنده حماية ثانية برضو لكن ده أسرع
+    const _existingPhotoEl = document.getElementById('eqf_existing_photo_url');
+    const _newPhotoEl      = document.getElementById('eqf_photo_url');
+    const photo_url = (_newPhotoEl && _newPhotoEl.value.trim())
+        ? _newPhotoEl.value.trim()
+        : (_existingPhotoEl && _existingPhotoEl.value.trim() ? _existingPhotoEl.value.trim() : '');
+
     const payload = { 
     form_type: 'daily', 
     row_index,
     group_name, cat_name, element_id, element_name, 
     item_name, contractor, date, done_qty, equipments,
-    added_by   // email أو اسم المستخدم الذي أضاف السجل
+    added_by,   // email أو اسم المستخدم الذي أضاف السجل
+    photo_url   // الصورة الجديدة أو القديمة المحفوظة
 };
     try {
         const r = await fetch(scriptUrl, {
