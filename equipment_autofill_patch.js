@@ -82,6 +82,7 @@ function afFill(elementId, date) {
         if ((row[0]||'').trim() === elementId && norm((row[4]||'').trim()) === target) {
             found = row;
             break;
+            window._afFoundRowIndex = i + 2; // +2: صف الهيدر (1) + index يبدأ من 0
         }
     }
 
@@ -172,7 +173,14 @@ function afFill(elementId, date) {
             });
         }
     }
-
+   var rowIdxInp = document.getElementById('eqf_row_index');
+   if (!rowIdxInp) {
+       rowIdxInp = document.createElement('input');
+       rowIdxInp.type = 'hidden';
+       rowIdxInp.id = 'eqf_row_index';
+       document.getElementById('eqf_feedback').parentElement.appendChild(rowIdxInp);
+   }
+   rowIdxInp.value = window._afFoundRowIndex || '';
     /* بادج "تم تحميل سجل موجود" */
     var oldBadge = document.getElementById('af_loaded_badge');
     if (oldBadge) oldBadge.remove();
@@ -309,5 +317,15 @@ window.eqResetForm = function() {
     if (_origReset) _origReset.apply(this, arguments);
 };
 
+// في equipment_autofill_patch.js، في ربط أحداث التغيير
+document.addEventListener('change', function(e) {
+    if (e.target && (e.target.id === 'eqf_date')) {
+        // لو التاريخ تغيّر، امسح الـ row_index لأن autofill سيعيد البحث
+        var rowIdx = document.getElementById('eqf_row_index');
+        if (rowIdx) rowIdx.value = '';
+        window._afFoundRowIndex = null;
+        setTimeout(afCheck, 80); // afCheck ستملأ row_index لو لقت سجل جديد
+    }
+});
 window.afCheck      = afCheck;
 window.afClearBadge = afClearBadge;
