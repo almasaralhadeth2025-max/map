@@ -2,7 +2,8 @@
    AUTOFILL PATCH — equipment_autofill_patch.js  (v4)
    الفرق عن v3: حذف عمود PHOTO (hyperlink) — الصورة تُقرأ من col[6] مباشرة كـ URL خام
    هيكل Sheet2: [0]element_id [1]element_name [2]item_name [3]contractor
-                [4]date [5]done_qty [6]PHOTO_URL [7]type1 [8]count1 ...
+                [4]date [5]done_qty [6]PHOTO_URL [7]added_by [8]timestamp
+                [9]type1 [10]count1 ...
    ==================================================== */
 
 var _afRows = [];
@@ -134,9 +135,9 @@ function afFill(elementId, date) {
         _afDisplayPhoto(photoUrl, directUrl);
     }
 
-    /* col 7+ = معدات (انتقل من col8 إلى col7 بسبب حذف عمود PHOTO) */
+    /* col 9+ = معدات (col7=added_by, col8=timestamp, معدات تبدأ من col9) */
     var pairs = [];
-    for (var j = 7; j+1 < found.length; j += 2) {
+    for (var j = 9; j+1 < found.length; j += 2) {
         var type  = (found[j]  ||'').trim();
         var count = (found[j+1]||'').trim();
         if (type) pairs.push({ type:type, count:count||'0' });
@@ -178,6 +179,10 @@ function afFill(elementId, date) {
                 if (cntInp) {
                     cntInp.value = pair.count;
                     console.log('[autofill] eq row set count:', pair.count, '→', cntInp.id);
+                }
+                // حدّث قوائم المعدات بعد كل إضافة عشان تتشال المكررات
+                if (typeSel && typeSel.value && window.eqRefreshAllSelects) {
+                    window.eqRefreshAllSelects();
                 }
             });
         }
