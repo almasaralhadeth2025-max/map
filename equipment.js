@@ -1734,7 +1734,9 @@ function eqResetCumulForm() {
     if (info) info.style.display = 'none';
     const lbl = document.getElementById('eqfc_band_display');
     if (lbl) { lbl.value = '-- اختر البند --'; lbl.style.opacity = ''; }
-    
+    const badge = document.getElementById('eqfc_current_badge');
+    if (badge) badge.style.display = 'none';
+}
 
 /* ════════════════════════════════════════════════════
    إرسال بيانات التراكمي → Sheet1 مباشرة
