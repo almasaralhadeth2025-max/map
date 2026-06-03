@@ -166,12 +166,19 @@ function eqSelectElement(id, name) {
             document.getElementById('eqf_cat_id').value     = matchedCat.id   || '';
 
             // تحديث الـ label في الزر
-            const lbl = document.getElementById('eqf_band_display');
+            const lbl = document.getElementById('eqf_band_label');
             if (lbl) {
-                lbl.value = matchedSub.name;
-                lbl.style.opacity = '1';
+                lbl.textContent = matchedSub.name;
+                lbl.style.color = 'rgba(255,255,255,0.9)';
             }
-            // band display is now a readonly input — no button to manipulate
+            const bandBtn = document.getElementById('eqf_band_btn');
+            if (bandBtn) {
+                bandBtn.style.borderColor = 'rgba(39,174,106,0.5)';
+                bandBtn.disabled = true;
+                bandBtn.style.opacity = '0.6';
+                bandBtn.style.cursor  = 'not-allowed';
+                bandBtn.title = 'البند مرتبط تلقائياً بالعنصر المختار';
+            }
 
             // المجموعة
             const group = getGroupForSub(matchedSub.id);
@@ -188,7 +195,14 @@ function eqClearElement() {
     document.getElementById('eqf_element_info').style.display = 'none';
 
     // ── إعادة تفعيل زر البند ──
-    // band display is now a readonly input — no button to manipulate
+    const bandBtn = document.getElementById('eqf_band_btn');
+    if (bandBtn) {
+        bandBtn.disabled = false;
+        bandBtn.style.opacity  = '';
+        bandBtn.style.cursor   = '';
+        bandBtn.style.borderColor = '';
+        bandBtn.title = '';
+    }
     // مسح بيانات البند
     document.getElementById('eqf_item_name').value   = '';
     document.getElementById('eqf_band_sheet').value  = '';
@@ -196,8 +210,8 @@ function eqClearElement() {
     document.getElementById('eqf_cat_id').value      = '';
     document.getElementById('eqf_group_name').value  = '';
     document.getElementById('eqf_group_id').value    = '';
-    const lbl = document.getElementById('eqf_band_display');
-    if (lbl) { lbl.value = ''; lbl.style.opacity = ''; }
+    const lbl = document.getElementById('eqf_band_label');
+    if (lbl) { lbl.textContent = '-- اختر البند --'; lbl.style.color = ''; }
 }
 
 /* ── Pick from map ── */
@@ -422,10 +436,10 @@ function eqRenderBandPicker(q) {
 function eqSelectBand(name, sheetId, catName, catId) {
     document.getElementById('eqf_item_name').value  = name;
     document.getElementById('eqf_band_sheet').value = sheetId || '';
-    const lbl = document.getElementById('eqf_band_display');
-    lbl.value = name;
-    lbl.style.opacity = '1';
-    // band is now readonly input
+    const lbl = document.getElementById('eqf_band_label');
+    lbl.textContent = name;
+    lbl.style.color = 'rgba(255,255,255,0.9)';
+    document.getElementById('eqf_band_btn').style.borderColor = 'rgba(106,45,145,0.5)';
 
     // ── البند الرئيسي ──
     document.getElementById('eqf_cat_name').value = catName || '';
@@ -509,7 +523,11 @@ function eqAddEquipmentRow() {
         sel.addEventListener('change', function() {
             eqRefreshAllSelects();
         });
-        sel.focus();
+        // focus فقط لو المستخدم ضغط إضافة معدة يدوياً (مش عند فتح الشاشة)
+        if (eqAddEquipmentRow._userTriggered) {
+            sel.focus();
+            eqAddEquipmentRow._userTriggered = false;
+        }
     }
 }
 /* ── Remove an equipment row ── */
@@ -545,8 +563,10 @@ function eqResetForm() {
     document.getElementById('eqf_cat_id').value      = '';
     document.getElementById('eqf_group_name').value  = '';
     document.getElementById('eqf_group_id').value    = '';
-    const lbl = document.getElementById('eqf_band_display');
-    if (lbl) { lbl.value = ''; lbl.style.opacity = ''; }
+    const lbl = document.getElementById('eqf_band_label');
+    if (lbl) { lbl.textContent = '-- اختر البند --'; lbl.style.color = ''; }
+    const btn = document.getElementById('eqf_band_btn');
+    if (btn) btn.style.borderColor = '';
     document.getElementById('eqf_contractor').value   = '';
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('eqf_date').value = today;
@@ -583,37 +603,13 @@ function eqHideFeedback() {
 function eqCollectEquipments() {
     const rows = document.querySelectorAll('#eqf_equipments_container .eq-item-row');
     const result = [];
-    let hasEmptyCount = false;
-
     rows.forEach(row => {
         const typeInp  = row.querySelector('.eq-type-inp');
         const countInp = row.querySelector('input[type="number"]');
         const t = (typeInp ? typeInp.value.trim() : '');
-        const rawVal = countInp ? countInp.value.trim() : '';
-        const c = parseInt(rawVal) || 0;
-
-        if (t) {
-            if (rawVal === '' || c <= 0) {
-                hasEmptyCount = true;
-                // تمييز الخانة الفارغة باللون الأحمر
-                if (countInp) {
-                    countInp.style.borderColor = '#e53935';
-                    countInp.style.boxShadow   = '0 0 0 2px rgba(229,57,53,0.3)';
-                    countInp.focus();
-                }
-            } else {
-                if (countInp) {
-                    countInp.style.borderColor = '';
-                    countInp.style.boxShadow   = '';
-                }
-                result.push({ type: t, count: c });
-            }
-        }
+        const c = parseInt(countInp ? countInp.value : '0') || 0;
+        if (t) result.push({ type: t, count: c });
     });
-
-    if (hasEmptyCount) {
-        result._hasError = true; // علامة للـ submit
-    }
     return result;
 }
 
@@ -639,10 +635,6 @@ async function eqSubmitForm() {
     if (!band_sheet)   { eqShowFeedback('❌ البند المختار ليس له شيت مرتبط — راجع الإعدادات', 'error'); return; }
 
     const equipments = eqCollectEquipments();
-    if (equipments._hasError) {
-        eqShowFeedback('❌ يرجى إدخال عدد صحيح (أكبر من صفر) لجميع المعدات', 'error');
-        return;
-    }
     if (!equipments.length) {
         eqShowFeedback('❌ يرجى إضافة معدة واحدة على الأقل', 'error');
         return;
@@ -1388,9 +1380,15 @@ function eqClearCumulElement() {
     });
     const info = document.getElementById('eqfc_element_info');
     if (info) info.style.display = 'none';
-    // band display is now a readonly input — no button to manipulate
-    const lbl = document.getElementById('eqfc_band_display');
-    if (lbl) { lbl.value = ''; lbl.style.opacity = ''; }
+    const bandBtn = document.getElementById('eqfc_band_btn');
+    if (bandBtn) {
+        bandBtn.disabled = false;
+        bandBtn.style.opacity = '';
+        bandBtn.style.cursor  = '';
+        bandBtn.style.borderColor = '';
+    }
+    const lbl = document.getElementById('eqfc_band_label');
+    if (lbl) { lbl.textContent = '-- اختر البند --'; lbl.style.color = ''; }
     const badge = document.getElementById('eqfc_current_badge');
     if (badge) badge.style.display = 'none';
 }
@@ -1589,10 +1587,17 @@ function eqSelectCumulElement(id, name) {
     document.getElementById('eqfc_cat_name').value   = matchedCat.name || '';
     document.getElementById('eqfc_cat_id').value     = matchedCat.id   || '';
 
-    const lbl = document.getElementById('eqfc_band_display');
-    if (lbl) { lbl.value = matchedSub.name; lbl.style.opacity = '1'; }
+    const lbl = document.getElementById('eqfc_band_label');
+    if (lbl) { lbl.textContent = matchedSub.name; lbl.style.color = 'rgba(255,255,255,0.9)'; }
 
-    // band display is now a readonly input — no button to manipulate
+    const bandBtn = document.getElementById('eqfc_band_btn');
+    if (bandBtn) {
+        bandBtn.style.borderColor = 'rgba(33,150,243,0.5)';
+        bandBtn.disabled = true;
+        bandBtn.style.opacity = '0.6';
+        bandBtn.style.cursor  = 'not-allowed';
+        bandBtn.title = 'البند مرتبط تلقائياً بالعنصر المختار';
+    }
 
     const group = getGroupForSub(matchedSub.id);
     document.getElementById('eqfc_group_name').value = group ? (group.name || '—') : '—';
@@ -1688,9 +1693,11 @@ window.eqSelectBand = function(name, sheetId, catName, catId) {
         window._eqBandPickerTarget = null;
         document.getElementById('eqfc_item_name').value  = name;
         document.getElementById('eqfc_band_sheet').value = sheetId || '';
-        const lbl = document.getElementById('eqfc_band_display');
-        if (lbl) { lbl.value = name; lbl.style.opacity = '1'; }
-        // band is now readonly input — no btndocument.getElementById('eqfc_cat_name').value = catName || '';
+        const lbl = document.getElementById('eqfc_band_label');
+        if (lbl) { lbl.textContent = name; lbl.style.color = 'rgba(255,255,255,0.9)'; }
+        const btn = document.getElementById('eqfc_band_btn');
+        if (btn) btn.style.borderColor = 'rgba(33,150,243,0.5)';
+        document.getElementById('eqfc_cat_name').value = catName || '';
         document.getElementById('eqfc_cat_id').value   = catId   || '';
         const sub = (categories || []).flatMap(c => c.subitems).find(s => s.sheetId === sheetId && s.name === name);
         const group = sub ? getGroupForSub(sub.id) : null;
@@ -1732,9 +1739,10 @@ function eqResetCumulForm() {
     if (cDate) cDate.value = today;
     const info = document.getElementById('eqfc_element_info');
     if (info) info.style.display = 'none';
-    const lbl = document.getElementById('eqfc_band_display');
-    if (lbl) { lbl.value = ''; lbl.style.opacity = ''; }
-    // band is now readonly input — no btnbtn.disabled = false; btn.style.opacity = ''; btn.style.cursor = ''; btn.title = ''; }
+    const lbl = document.getElementById('eqfc_band_label');
+    if (lbl) { lbl.textContent = '-- اختر البند --'; lbl.style.color = ''; }
+    const btn = document.getElementById('eqfc_band_btn');
+    if (btn) { btn.style.borderColor = ''; btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = ''; btn.title = ''; }
     const fb = document.getElementById('eqfc_feedback');
     if (fb) { fb.style.display = 'none'; fb.className = ''; }
     const badge = document.getElementById('eqfc_current_badge');
