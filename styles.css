@@ -3404,9 +3404,11 @@
             #navTabAdd,
             .nav-tabs { display: none !important; }
 
-            /* أخفِ مجموعات الأدوات (تنتقل للقائمة) */
+            /* أخفِ أيقونات الأدوات في شريط التنقل، لكن دع لوحات الـ panel تعمل من القائمة */
             #toolsGroup,
-            #settingsGroup,
+            #settingsGroup { display: flex !important; }
+            #toolsGroup .nav-icon-btn,
+            #settingsGroup .nav-icon-btn { display: none !important; }
             .nav-right-divider { display: none !important; }
 
             /* ابقِ chip المستخدم */
