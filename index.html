@@ -670,7 +670,7 @@
 
 <div class="modal" id="equipmentFormModal" style="z-index:65000;padding:20px;align-items:center;justify-content:center;">
     <div class="bd-modal-overlay" onclick="closeEquipmentFormModal()" style="position:fixed;inset:0;"></div>
-    <div style="position:relative;z-index:2;display:flex;flex-direction:column;width:min(800px,96vw);max-height:calc(100vh - 40px);background:#0d0d1a;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,0.07);box-shadow:0 32px 80px rgba(0,0,0,0.7);animation:cfSlideIn 0.28s cubic-bezier(0.34,1.2,0.64,1);">
+    <div id="eqFormBox" style="position:relative;z-index:2;display:flex;flex-direction:column;width:min(800px,96vw);max-height:calc(100vh - 40px);background:#0d0d1a;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,0.07);box-shadow:0 32px 80px rgba(0,0,0,0.7);animation:cfSlideIn 0.28s cubic-bezier(0.34,1.2,0.64,1);">
 
         <!-- ══ Header ══ -->
         <div style="background:linear-gradient(135deg,#0a2a1a 0%,#1a6040 50%,#0d3d2a 100%);padding:18px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;gap:12px;">
@@ -736,7 +736,7 @@
             </div>
 
             <!-- Group + Category -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+            <div class="eq-grid-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
                 <div class="eq-form-field">
                     <label class="eq-form-label">🗂 المجموعة</label>
                     <input type="text" id="eqf_group_name" class="eq-form-input" readonly placeholder="—" style="opacity:0.65;cursor:default;background:rgba(255,255,255,0.03);">
@@ -750,7 +750,7 @@
             </div>
 
             <!-- البند + المقاول -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+            <div class="eq-grid-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
                 <div class="eq-form-field">
                     <label class="eq-form-label">📋 البند</label>
                     <input type="hidden" id="eqf_item_name">
@@ -768,7 +768,7 @@
             </div>
 
             <!-- التاريخ + الكمية المنفذة -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+            <div class="eq-grid-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
                 <div class="eq-form-field">
                     <label class="eq-form-label">📅 التاريخ</label>
                     <input type="date" id="eqf_date" class="eq-form-input">
@@ -783,7 +783,7 @@
             <div style="border:1px solid rgba(39,174,106,0.25);border-radius:12px;overflow:hidden;margin-bottom:16px;">
                 <div style="background:linear-gradient(135deg,rgba(39,174,106,0.15),rgba(26,122,74,0.1));padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(39,174,106,0.15);">
                     <span style="font-size:13px;font-weight:800;color:rgba(255,255,255,0.9);font-family:'Cairo',sans-serif;">🚜 أنواع المعدات</span>
-                    <button onclick="eqAddEquipmentRow()" class="eq-add-eq-btn">＋ إضافة معدة</button>
+                    <button onclick="eqAddEquipmentRow._userTriggered=true; eqAddEquipmentRow()" class="eq-add-eq-btn">＋ إضافة معدة</button>
                 </div>
                 <div id="eqf_equipments_container" style="padding:12px 16px;display:flex;flex-direction:column;gap:10px;min-height:60px;"></div>
             </div>
@@ -833,7 +833,7 @@
             </div>
 
             <!-- Group + Category -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+            <div class="eq-grid-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
                 <div class="eq-form-field">
                     <label class="eq-form-label">🗂 المجموعة</label>
                     <input type="text" id="eqfc_group_name" class="eq-form-input" readonly placeholder="—" style="opacity:0.65;cursor:default;background:rgba(255,255,255,0.03);">
@@ -847,7 +847,7 @@
             </div>
 
             <!-- البند + المقاول -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+            <div class="eq-grid-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
                 <div class="eq-form-field">
                     <label class="eq-form-label">📋 البند</label>
                     <input type="hidden" id="eqfc_item_name">
@@ -877,7 +877,7 @@
                 <div style="background:linear-gradient(135deg,rgba(33,150,243,0.15),rgba(21,101,192,0.1));padding:12px 16px;border-bottom:1px solid rgba(33,150,243,0.15);">
                     <span style="font-size:13px;font-weight:800;color:rgba(255,255,255,0.9);font-family:'Cairo',sans-serif;">📊 بيانات الكمية</span>
                 </div>
-                <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                <div class="eq-grid-2col" style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:14px;">
 
                     <!-- الكمية الإجمالية -->
                     <div class="eq-form-field">
