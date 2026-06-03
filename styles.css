@@ -1,4 +1,4 @@
-        /* ========== THEMES ========== */
+/* ========== THEMES ========== */
         :root {
             --purple:      #6a2d91;
             --purple-mid:  #8b44b8;
@@ -3363,3 +3363,52 @@
 
         /* -- شاشات كبيرة (> 1200px): الحجم الكامل المحدد بالـ HTML -- */
 
+
+        /* ════════════════════════════════════════════════════
+           ☰  MOBILE / TABLET MENU  (≤ 1024px)
+           ════════════════════════════════════════════════════ */
+
+        /* الزر مخفي على الشاشات الكبيرة */
+        #mobileMenuBtn { display: none !important; }
+
+        /* صفوف القائمة المنسدلة */
+        .mmRow {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.07);
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.85);
+            transition: background 0.15s;
+            margin-bottom: 3px;
+        }
+        .mmRow span:first-child { font-size: 17px; flex-shrink: 0; }
+        .mmRow:active { transform: scale(0.98); background: rgba(255,255,255,0.13) !important; }
+        .mmRow-green { background:rgba(39,174,106,0.08);  border-color:rgba(39,174,106,0.2);  color:#5cc890; }
+        .mmRow-blue  { background:rgba(33,150,243,0.08);  border-color:rgba(33,150,243,0.2);  color:#5baddf; }
+        .mmRow-gold  { background:rgba(245,200,66,0.08);  border-color:rgba(245,200,66,0.2);  color:#f5c842; }
+
+        /* ════ على الموبايل والتابلت (≤ 1024px) ════ */
+        @media (max-width: 1024px) {
+
+            /* أظهر زر ☰ */
+            #mobileMenuBtn { display: flex !important; }
+
+            /* أخفِ كل تبويبات الـ navbar */
+            #navTabReports,
+            #navTabAdd,
+            .nav-tabs { display: none !important; }
+
+            /* أخفِ مجموعات الأدوات (تنتقل للقائمة) */
+            #toolsGroup,
+            #settingsGroup,
+            .nav-right-divider { display: none !important; }
+
+            /* ابقِ chip المستخدم */
+            #userGroup { display: flex !important; }
+        }
