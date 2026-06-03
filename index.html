@@ -325,74 +325,7 @@
                 </div>
             </div>
 
-
-        <!-- ══ Mobile Hamburger ══ -->
-        <button id="mobileMenuBtn"
-            onclick="toggleMobileMenu()"
-            style="display:none;align-items:center;justify-content:center;width:36px;height:36px;
-                   border-radius:9px;border:1px solid rgba(255,255,255,0.18);
-                   background:rgba(255,255,255,0.07);color:white;font-size:20px;
-                   cursor:pointer;flex-shrink:0;transition:all 0.2s;font-family:monospace;">
-            ☰
-        </button>
-
-    </div><!-- end top-nav -->
-
-    <!-- ══ Mobile Dropdown Menu ══ -->
-    <div id="mobileMenuOverlay" onclick="closeMobileMenu()"
-         style="display:none;position:fixed;inset:0;z-index:19998;background:rgba(0,0,0,0.45);"></div>
-    <div id="mobileMenu"
-         style="display:none;position:fixed;top:52px;right:0;left:0;z-index:19999;
-                background:linear-gradient(180deg,#1a0a2e 0%,#26104a 100%);
-                border-bottom:2px solid rgba(255,255,255,0.1);
-                box-shadow:0 12px 40px rgba(0,0,0,0.6);
-                padding:10px 14px 16px;flex-direction:column;gap:3px;
-                max-height:85vh;overflow-y:auto;">
-
-        <!-- قسم: التقارير -->
-        <div class="mm-section-label">📋 التقارير</div>
-        <div class="mm-item" onclick="openBillsModal();closeMobileMenu()">
-            <span>📊</span><span>داشبورد البنود</span>
         </div>
-        <div class="mm-item" onclick="openCashflowModal();closeMobileMenu()">
-            <span>💰</span><span>التدفقات النقدية</span>
-        </div>
-        <div class="mm-item" onclick="openEquipmentModal();closeMobileMenu()">
-            <span>🚜</span><span>المعدات</span>
-        </div>
-
-        <div class="mm-divider"></div>
-
-        <!-- قسم: الإضافة -->
-        <div class="mm-section-label">✏️ إضافة</div>
-        <div class="mm-item mm-item-green" onclick="openEquipmentFormModal();closeMobileMenu()">
-            <span>🚜</span><span>تسجيل الكمية - المعدات</span>
-        </div>
-        <div class="mm-item mm-item-blue" onclick="openCompanyCashflowForm();closeMobileMenu()">
-            <span>🏢</span><span>تدفق نقدي - الشركة</span>
-        </div>
-        <div class="mm-item mm-item-gold" onclick="openContractorCashflowForm();closeMobileMenu()">
-            <span>👷</span><span>تدفق نقدي - المقاولون</span>
-        </div>
-
-        <div class="mm-divider"></div>
-
-        <!-- قسم: الأدوات -->
-        <div class="mm-section-label">🔧 الأدوات</div>
-        <div class="mm-item" onclick="togglePanel('contractorPanel');closeMobileMenu()">
-            <span>👷</span><span>المقاولون</span>
-        </div>
-        <div class="mm-item" onclick="togglePanel('notifPanel');closeMobileMenu()">
-            <span>🔔</span><span>الإشعارات</span>
-            <span id="mmNotifDot" style="display:none;width:7px;height:7px;border-radius:50%;background:#e53935;margin-right:auto;"></span>
-        </div>
-        <div class="mm-item admin-only" onclick="togglePanel('settingsPanel');closeMobileMenu()">
-            <span>⚙️</span><span>الإعدادات</span>
-        </div>
-        <div class="mm-item" onclick="togglePanel('themePanel');closeMobileMenu()">
-            <span>🎨</span><span>الثيمات</span>
-        </div>
-
     </div>
 
     <!-- MAIN CONTENT -->
@@ -1194,26 +1127,5 @@
     <script src="equipment.js"></script>
     <script src="equipment_camera_patch.js"></script>
     <script src="equipment_autofill_patch.js"></script> 
-
-    <script>
-    /* ══ Mobile Menu ══ */
-    function toggleMobileMenu() {
-        var menu    = document.getElementById('mobileMenu');
-        var overlay = document.getElementById('mobileMenuOverlay');
-        var btn     = document.getElementById('mobileMenuBtn');
-        var isOpen  = menu.style.display === 'flex';
-        menu.style.display    = isOpen ? 'none' : 'flex';
-        overlay.style.display = isOpen ? 'none' : 'block';
-        btn.innerHTML         = isOpen ? '☰' : '✕';
-    }
-    function closeMobileMenu() {
-        var menu    = document.getElementById('mobileMenu');
-        var overlay = document.getElementById('mobileMenuOverlay');
-        var btn     = document.getElementById('mobileMenuBtn');
-        if (menu)    menu.style.display    = 'none';
-        if (overlay) overlay.style.display = 'none';
-        if (btn)     btn.innerHTML         = '☰';
-    }
-    </script>
 </body>
 </html>
