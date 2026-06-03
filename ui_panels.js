@@ -160,17 +160,17 @@
             @media (max-width: 1024px) {
                 .ui-panel-sheet {
                     position: fixed !important;
-                    bottom: 0 !important;
-                    right:  0 !important;
-                    left:   0 !important;
-                    top: auto !important;
+                    top: 68px !important;
+                    left: 0 !important;
+                    right: 0 !important;
+                    bottom: 12px !important;
                     width: 100% !important;
                     max-width: 100% !important;
-                    max-height: calc(100vh - 72px) !important;
-                    min-height: 120px !important;
+                    max-height: calc(100vh - 80px) !important;
+                    min-height: 140px !important;
                     border-radius: 22px 22px 0 0 !important;
                     z-index: 29995 !important;
-                    box-shadow: 0 -10px 50px rgba(0,0,0,0.45) !important;
+                    box-shadow: 0 8px 40px rgba(0,0,0,0.35) !important;
                     overflow-y: auto !important;
                     animation: uiSlideUp 0.28s cubic-bezier(0.34,1.1,0.64,1) !important;
                     display: flex !important;
@@ -399,3 +399,5 @@
     });
 
 })();
+
+
