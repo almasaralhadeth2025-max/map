@@ -193,13 +193,12 @@
     document.body.appendChild(_overlay);
 
     function _closeMobilePanelSheet() {
-    document.querySelectorAll('.ui-panel-sheet').forEach(p => {
-        p.classList.remove('active', 'ui-panel-sheet');
-        p.style.display = '';  // ← أضف هذا السطر
-        p.style.cssText = '';
-    });
-    _overlay.style.display = 'none';
-}
+        document.querySelectorAll('.ui-panel-sheet').forEach(p => {
+            p.classList.remove('active', 'ui-panel-sheet');
+            p.style.cssText = '';
+        });
+        _overlay.style.display = 'none';
+    }
 
     /* ── الدالة الرئيسية ── */
     window.togglePanel = function (id) {
@@ -222,16 +221,11 @@
         if (isOpen) return; // كان مفتوحاً → نغلق فقط
 
         /* --- افتح الـ panel --- */
-         panel.classList.add('active');
-         if (isMobile()) {
-             panel.classList.add('ui-panel-sheet');
-             _overlay.style.display = 'block';
-             // ← السطر المضاف: أجبر الـ panel على الظهور
-             const needsFlex = panel.classList.contains('contractor-panel') ||
-                               panel.classList.contains('equipment-panel') ||
-                               panel.classList.contains('settings-panel');
-             panel.style.display = needsFlex ? 'flex' : 'block';
-         }
+        panel.classList.add('active');
+        if (isMobile()) {
+            panel.classList.add('ui-panel-sheet');
+            _overlay.style.display = 'block';
+        }
 
         /* --- side-effects (محفوظة من main.js) --- */
         if (id === 'settingsPanel') {
