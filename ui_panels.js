@@ -131,7 +131,6 @@
                 /* إصلاح 2: z-index أقل من الـ panel بـ 5 درجات */
                 z-index: 29990;
                 background: rgba(0,0,0,0.52);
-                backdrop-filter: blur(3px);
                 /* لا يوجد pointer-events block — الـ panel فوقه */
             }
 
