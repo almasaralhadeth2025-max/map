@@ -3206,7 +3206,8 @@
             .settings-panel,
             .theme-panel,
             .notif-panel,
-            .contractor-panel {
+            .contractor-panel,
+            .user-dropdown {
                 width: min(320px, 95vw) !important;
                 right: 0;
                 left: auto;
