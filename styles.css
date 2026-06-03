@@ -3362,3 +3362,22 @@
         }
 
         /* -- شاشات كبيرة (> 1200px): الحجم الكامل المحدد بالـ HTML -- */
+
+        /* ══════════════════════════════════════════════════════
+           MOBILE HAMBURGER MENU
+           ══════════════════════════════════════════════════════ */
+        #mobileMenuBtn { display: none; }
+
+        @media (max-width: 768px) {
+            /* إظهار زر الهامبرغر */
+            #mobileMenuBtn { display: flex !important; }
+
+            /* إخفاء التبويبات والقوائم المنسدلة من الـ navbar */
+            #navTabReports,
+            #navTabAdd,
+            .nav-tabs { display: none !important; }
+
+            /* Mobile menu items hover effect */
+            #mobileMenu > div { transition: transform 0.1s ease; }
+            #mobileMenu > div:active { transform: scale(0.97); }
+        }
