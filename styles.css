@@ -1,4 +1,4 @@
-        /* ========== THEMES ========== */
+/* ========== THEMES ========== */
         :root {
             --purple:      #6a2d91;
             --purple-mid:  #8b44b8;
@@ -3094,3 +3094,271 @@
         .eq-submit-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(39,174,106,0.5); }
         .eq-submit-btn:disabled { opacity: 0.6; transform: none; cursor: not-allowed; }
 
+
+        /* ============================================================
+           RESPONSIVE — MOBILE & TABLET
+           نقطة الكسر الرئيسية: 768px (موبايل) و 1024px (تابلت)
+           ============================================================ */
+
+        /* ══════════════════════════════════════════════════════
+           1. TOP NAV — MOBILE  (≤ 768px)
+           الهدف: صف واحد مضغوط مع collapse للأزرار والتبويبات
+           ══════════════════════════════════════════════════════ */
+        @media (max-width: 768px) {
+
+            /* الشريط: ارتفاع تلقائي، صف واحد مضغوط */
+            .top-nav {
+                height: auto !important;
+                min-height: 52px;
+                padding: 0 10px;
+                gap: 4px;
+                flex-wrap: nowrap;           /* كل شيء في صف واحد */
+                overflow: hidden;
+            }
+
+            /* اللوجو: حجمه يصغر */
+            .nav-logo {
+                margin-left: 8px;
+                padding-left: 8px;
+                flex-shrink: 0;
+            }
+            .nav-logo img { height: 30px; }
+            .nav-logo .logo-fallback { font-size: 22px; }
+
+            /* تبويب التقارير وإضافة — يصغروا ويحتفظوا بشكلهم */
+            #navTabReports,
+            #navTabAdd {
+                padding: 0 8px !important;
+                font-size: 11px !important;
+                height: 40px;
+                gap: 4px;
+                flex-shrink: 0;
+            }
+
+            /* نص التبويبات: اختصر لأيقونة فقط على أصغر الشاشات */
+            @media (max-width: 400px) {
+                #navTabReports span:first-child,
+                #navTabAdd span:first-child {
+                    display: none;
+                }
+            }
+
+            /* تبويب البنود (navTabBunood) — يظهر */
+            #navTabBunood {
+                padding: 0 8px !important;
+                font-size: 11px !important;
+                height: 40px;
+                flex-shrink: 0;
+            }
+
+            /* navTabs container — مرن بلا تمدد */
+            .nav-tabs {
+                flex: 0 0 auto;
+                padding: 0 2px;
+                gap: 0;
+            }
+
+            /* nav-right: يأخذ المساحة المتبقية ويضغط في اليمين */
+            .nav-right {
+                flex: 1;
+                justify-content: flex-end;
+                gap: 3px;
+                padding: 0 2px;
+            }
+
+            /* مجموعات nav-right: حدودها تختفي وتصبح inline */
+            .nav-right-group {
+                background: transparent;
+                border: none;
+                padding: 0;
+                gap: 2px;
+            }
+
+            /* فواصل nav-right — تختفي */
+            .nav-right-divider { display: none; }
+
+            /* أيقونات أصغر */
+            .nav-icon-btn {
+                width: 32px !important;
+                height: 32px !important;
+                font-size: 15px !important;
+                border-radius: 8px;
+            }
+
+            /* user chip: اختصر اسم المستخدم */
+            .user-name-small { display: none; }
+            .user-chip { padding: 3px 5px !important; gap: 3px !important; }
+            .user-avatar { width: 26px !important; height: 26px !important; font-size: 11px !important; }
+
+            /* الأفاتار في الـ user chip */
+            .user-avatar img {
+                width: 26px !important;
+                height: 26px !important;
+            }
+
+            /* القوائم المنسدلة: تُعدَّل للموبايل */
+            .tab-sub-dropdown,
+            .bunood-main-dd {
+                max-width: 90vw;
+            }
+
+            /* الـ settings/theme/notif panels تأخذ عرض معقول */
+            .settings-panel,
+            .theme-panel,
+            .notif-panel,
+            .contractor-panel {
+                width: min(320px, 95vw) !important;
+                right: 0;
+                left: auto;
+            }
+
+            /* main-content: تعديل الـ top nav height */
+            .main-content {
+                /* يأخذ ما تبقى بعد الـ nav */
+            }
+        }
+
+        /* ══════════════════════════════════════════════════════
+           2. TOP NAV — TABLET  (769–1024px)
+           تعديلات خفيفة بدون كسر التصميم
+           ══════════════════════════════════════════════════════ */
+        @media (min-width: 769px) and (max-width: 1024px) {
+
+            .top-nav { padding: 0 10px; gap: 4px; }
+
+            .nav-logo { margin-left: 10px; padding-left: 10px; }
+            .nav-logo img { height: 34px; }
+
+            #navTabReports,
+            #navTabAdd {
+                padding: 0 10px !important;
+                font-size: 11.5px !important;
+            }
+
+            .nav-icon-btn {
+                width: 34px !important;
+                height: 34px !important;
+                font-size: 15px !important;
+            }
+
+            .user-name-small { font-size: 11px !important; }
+        }
+
+        /* ══════════════════════════════════════════════════════
+           3. EQUIPMENT FORM MODAL — كل الشاشات
+           ══════════════════════════════════════════════════════ */
+
+        /* -- الموبايل: bottom-sheet -- */
+        @media (max-width: 640px) {
+
+            /* المودال يتراص في الأسفل */
+            #equipmentFormModal {
+                padding: 0 !important;
+                align-items: flex-end !important;
+            }
+
+            /* الـ box: عرض كامل + انزلاق من الأسفل */
+            #eqFormBox {
+                width: 100% !important;
+                max-width: 100% !important;
+                max-height: 94vh !important;
+                border-radius: 20px 20px 0 0 !important;
+            }
+
+            /* Header أصغر */
+            #eqFormBox > div:first-child {
+                padding: 14px 16px !important;
+                gap: 10px !important;
+            }
+            #eqFormBox > div:first-child > div:first-child > div:first-child {
+                width: 36px !important;
+                height: 36px !important;
+                font-size: 18px !important;
+            }
+
+            /* تبويبات الفورم: مشغولة المساحة */
+            #eqfTabDaily,
+            #eqfTabCumul {
+                padding: 6px 10px !important;
+                font-size: 10px !important;
+                white-space: nowrap;
+            }
+
+            /* Body padding أصغر */
+            #eqfBodyDaily,
+            #eqfBodyCumul {
+                padding: 14px 16px !important;
+            }
+
+            /* الـ 2-column grids → عمود واحد */
+            .eq-grid-2col {
+                grid-template-columns: 1fr !important;
+                gap: 10px !important;
+            }
+
+            /* حقول الإدخال: أكبر للمس */
+            .eq-form-input {
+                padding: 11px 12px !important;
+                font-size: 14px !important;
+                min-height: 44px;
+            }
+
+            /* صف المعدة: أكبر للمس */
+            .eq-item-row {
+                grid-template-columns: 1fr 85px 36px !important;
+                gap: 8px !important;
+                padding: 10px 12px !important;
+            }
+            .eq-item-row select.eq-type-inp {
+                font-size: 14px !important;
+                min-height: 44px;
+                padding: 8px 10px !important;
+            }
+            .eq-item-row input[type="number"] {
+                font-size: 14px !important;
+                min-height: 44px;
+                padding: 8px 6px !important;
+            }
+
+            /* Footer */
+            #eqFormBox > div:last-child {
+                padding: 12px 16px !important;
+                padding-bottom: max(12px, env(safe-area-inset-bottom)) !important;
+            }
+            .eq-reset-btn  { padding: 10px 14px !important; font-size: 12px !important; }
+            .eq-submit-btn { padding: 11px 20px !important; font-size: 13px !important; }
+        }
+
+        /* -- التابلت الصغير (641–900px) -- */
+        @media (min-width: 641px) and (max-width: 900px) {
+
+            #equipmentFormModal {
+                padding: 16px !important;
+                align-items: center !important;
+            }
+
+            #eqFormBox {
+                width: min(680px, 96vw) !important;
+                max-height: calc(100vh - 32px) !important;
+            }
+
+            .eq-grid-2col {
+                grid-template-columns: 1fr !important;
+                gap: 12px !important;
+            }
+
+            .eq-form-input { font-size: 13px !important; }
+        }
+
+        /* -- التابلت الكبير / لابتوب صغير (901–1200px) -- */
+        @media (min-width: 901px) and (max-width: 1200px) {
+
+            #eqFormBox {
+                width: min(750px, 96vw) !important;
+            }
+
+            /* الـ grids تبقى 2-col لكن gap يضيق */
+            .eq-grid-2col { gap: 12px !important; }
+        }
+
+        /* -- شاشات كبيرة (> 1200px): الحجم الكامل المحدد بالـ HTML -- */
