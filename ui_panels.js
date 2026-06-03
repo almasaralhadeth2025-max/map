@@ -55,6 +55,13 @@
         _closeMobilePanelSheet();
     };
 
+    window.openPanelFromMobile = function (id) {
+        closeMobileMenu();
+        window.requestAnimationFrame(() => {
+            if (typeof togglePanel === 'function') togglePanel(id);
+        });
+    };
+
 
     /* ══════════════════════════════════════════════════════
        3. NAV-BAR DROPDOWNS (تقارير / إضافة)
@@ -165,8 +172,6 @@
                     box-shadow: 0 -10px 50px rgba(0,0,0,0.45) !important;
                     overflow-y: auto !important;
                     animation: uiSlideUp 0.28s cubic-bezier(0.34,1.1,0.64,1) !important;
-                }
-                #contractorPanel.ui-panel-sheet {
                     display: flex !important;
                     flex-direction: column !important;
                 }
