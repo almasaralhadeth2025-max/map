@@ -326,7 +326,107 @@
             </div>
 
         </div>
+        <!-- ☰ Mobile/Tablet Menu Button -->
+        <button id="mobileMenuBtn" onclick="toggleMobileMenu()"
+            style="display:none;align-items:center;justify-content:center;
+                   width:36px;height:36px;border-radius:9px;
+                   border:1px solid rgba(255,255,255,0.18);
+                   background:rgba(255,255,255,0.07);
+                   color:white;font-size:20px;cursor:pointer;
+                   flex-shrink:0;transition:all 0.2s;">☰</button>
+
     </div>
+
+    <!-- ☰ Mobile/Tablet Dropdown — كل الأزرار والتبويبات -->
+    <div id="mobileMenuOverlay" onclick="closeMobileMenu()"
+         style="display:none;position:fixed;inset:0;z-index:19997;
+                background:rgba(0,0,0,0.5);backdrop-filter:blur(2px);"></div>
+
+    <div id="mobileMenu"
+         style="display:none;position:fixed;top:52px;right:0;left:0;
+                z-index:19998;
+                background:linear-gradient(180deg,#1a0a2e 0%,#26104a 100%);
+                border-bottom:2px solid rgba(255,255,255,0.1);
+                box-shadow:0 16px 48px rgba(0,0,0,0.65);
+                padding:10px 14px 20px;
+                flex-direction:column;gap:3px;
+                max-height:80vh;overflow-y:auto;
+                font-family:'Cairo',sans-serif;">
+
+        <!-- ── التقارير ── -->
+        <div style="font-size:10px;font-weight:900;color:rgba(255,255,255,0.35);
+                    letter-spacing:.8px;padding:8px 2px 4px;border-bottom:1px solid rgba(255,255,255,0.07);
+                    margin-bottom:4px;">📋 التقارير</div>
+
+        <div class="mmRow" onclick="openBillsModal();closeMobileMenu()">
+            <span>📊</span><span>داشبورد البنود</span>
+        </div>
+        <div class="mmRow" onclick="openCashflowModal();closeMobileMenu()">
+            <span>💰</span><span>التدفقات النقدية</span>
+        </div>
+        <div class="mmRow" onclick="openEquipmentModal();closeMobileMenu()">
+            <span>🚜</span><span>المعدات</span>
+        </div>
+
+        <!-- ── إضافة ── -->
+        <div style="font-size:10px;font-weight:900;color:rgba(255,255,255,0.35);
+                    letter-spacing:.8px;padding:10px 2px 4px;border-bottom:1px solid rgba(255,255,255,0.07);
+                    margin-bottom:4px;">✏️ إضافة</div>
+
+        <div class="mmRow mmRow-green" onclick="openEquipmentFormModal();closeMobileMenu()">
+            <span>🚜</span><span>تسجيل الكمية - المعدات</span>
+        </div>
+        <div class="mmRow mmRow-blue" onclick="openCompanyCashflowForm();closeMobileMenu()">
+            <span>🏢</span><span>تدفق نقدي - الشركة</span>
+        </div>
+        <div class="mmRow mmRow-gold" onclick="openContractorCashflowForm();closeMobileMenu()">
+            <span>👷</span><span>تدفق نقدي - المقاولون</span>
+        </div>
+
+        <!-- ── الأدوات ── -->
+        <div style="font-size:10px;font-weight:900;color:rgba(255,255,255,0.35);
+                    letter-spacing:.8px;padding:10px 2px 4px;border-bottom:1px solid rgba(255,255,255,0.07);
+                    margin-bottom:4px;">🔧 الأدوات</div>
+
+        <div class="mmRow" onclick="togglePanel('contractorPanel');closeMobileMenu()">
+            <span>👷</span><span>المقاولون</span>
+        </div>
+        <div class="mmRow" onclick="togglePanel('notifPanel');closeMobileMenu()">
+            <span>🔔</span><span>الإشعارات</span>
+        </div>
+        <div class="mmRow admin-only" onclick="togglePanel('settingsPanel');closeMobileMenu()">
+            <span>⚙️</span><span>الإعدادات</span>
+        </div>
+        <div class="mmRow" onclick="togglePanel('themePanel');closeMobileMenu()">
+            <span>🎨</span><span>الثيمات</span>
+        </div>
+        <div class="mmRow" onclick="togglePanel('userDropdown');closeMobileMenu()">
+            <span>👤</span><span>الحساب الشخصي</span>
+        </div>
+
+    </div>
+
+    <!-- ☰ Mobile Menu JS -->
+    <script>
+    function toggleMobileMenu(){
+        var m=document.getElementById('mobileMenu');
+        var o=document.getElementById('mobileMenuOverlay');
+        var b=document.getElementById('mobileMenuBtn');
+        var open=m.style.display==='flex';
+        m.style.display=open?'none':'flex';
+        o.style.display=open?'none':'block';
+        b.innerHTML=open?'☰':'✕';
+        b.style.background=open?'rgba(255,255,255,0.07)':'rgba(255,255,255,0.18)';
+    }
+    function closeMobileMenu(){
+        var m=document.getElementById('mobileMenu');
+        var o=document.getElementById('mobileMenuOverlay');
+        var b=document.getElementById('mobileMenuBtn');
+        if(m){m.style.display='none';}
+        if(o){o.style.display='none';}
+        if(b){b.innerHTML='☰';b.style.background='rgba(255,255,255,0.07)';}
+    }
+    </script>
 
     <!-- MAIN CONTENT -->
     <div class="main-content">
