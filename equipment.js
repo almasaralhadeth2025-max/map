@@ -1,1131 +1,1858 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-    <title>الخريطة التفاعلية - مشروع ولي العهد</title>
-
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
-
-<base target="_blank">
-</head>
-<body>
-<body>
-
-<!-- ==================== LOGIN SCREEN ==================== -->
-<div id="loginScreen">
-    <div class="login-bg-pattern"></div>
-    <div class="login-box">
-        <div class="login-logo">
-            <img src="logo-left.png" class="logo-img" id="loginLogo" alt="شعار" onerror="this.style.display='none';document.getElementById('loginLogoFallback').style.display='block'">
-            <span class="crown-fallback" id="loginLogoFallback" style="display:none">👑</span>
-            <h1>مشروع ولي العهد</h1>
-            <p>الخريطة التفاعلية لمتابعة التنفيذ</p>
-        </div>
-
-        <div class="form-field">
-            <label>البريد الإلكتروني</label>
-            <input type="email" id="loginEmail" placeholder="example@email.com" autocomplete="username">
-        </div>
-
-        <div class="form-field">
-            <label>كلمة المرور</label>
-            <div style="position:relative">
-                <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" style="padding-left:38px">
-                <button type="button" id="togglePassword" onclick="togglePasswordVisibility()" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;opacity:0.6;transition:opacity 0.2s;padding:4px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">👁️</button>
-            </div>
-        </div>
-
-        <button class="login-btn" id="loginBtn" onclick="doLogin()">دخول</button>
-
-        <div class="login-error" id="loginError">بيانات الدخول غير صحيحة</div>
-
-        <div class="login-loading" id="loginLoading">
-            جاري التحقق
-            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-        </div>
-    </div>
-</div>
-
-<!-- ==================== MAIN APP ==================== -->
-<div id="mainApp">
-
-    <!-- TOP NAV BAR -->
-    <div class="top-nav">
-
-        <!-- Logo -->
-        <div class="nav-logo">
-            <img src="logo-left.png" id="navLogo" alt="شعار" onerror="this.style.display='none';document.getElementById('navLogoFallback').style.display='block'">
-            <span class="logo-fallback" id="navLogoFallback" style="display:none">👑</span>
-
-        </div>
-
-
-        <!-- تبويب التقارير (يجمع: داشبورد البنود + التدفقات النقدية + المعدات) -->
-        <div class="nav-tab" id="navTabReports" style="flex-shrink:0;position:relative;" onclick="toggleReportsDropdown(event)">
-            <span>📋 التقارير</span>
-            <div class="tab-sub-dropdown" id="reportsDropdown" style="min-width:200px;">
-                <div class="tab-sub-item" onclick="openBillsModal();closeReportsDropdown()">
-                    <span style="font-size:14px;">📊</span>
-                    <label>داشبورد البنود</label>
-                </div>
-                <div class="tab-sub-item" onclick="openCashflowModal();closeReportsDropdown()">
-                    <span style="font-size:14px;">💰</span>
-                    <label>التدفقات النقدية</label>
-                </div>
-                <div class="tab-sub-item" onclick="openEquipmentModal();closeReportsDropdown()">
-                    <span style="font-size:14px;">🚜</span>
-                    <label>المعدات</label>
-                </div>
-
-            </div>
-        </div>
-
-        <!-- تبويب الإضافة -->
-        <div class="nav-tab" id="navTabAdd" style="flex-shrink:0;position:relative;" onclick="toggleAddDropdown(event)">
-            <span>✏️ إضافة</span>
-            <div class="tab-sub-dropdown" id="addDropdown" style="min-width:220px;">
-                <div class="tab-sub-item" onclick="openEquipmentFormModal();closeAddDropdown()">
-                    <span style="font-size:14px;">🚜</span>
-                    <label>تسجيل الكمية - المعدات</label>
-                </div>
-                <div class="tab-sub-item" onclick="openCompanyCashflowForm();closeAddDropdown()">
-                    <span style="font-size:14px;">🏢</span>
-                    <label>تدفق نقدي - الشركة</label>
-                </div>
-                <div class="tab-sub-item" onclick="openContractorCashflowForm();closeAddDropdown()">
-                    <span style="font-size:14px;">👷</span>
-                    <label>تدفق نقدي - المقاولون</label>
-                </div>
-            </div>
-        </div>
-
-        <!-- Category tabs (dynamic) -->
-        <div class="nav-tabs" id="navTabs"></div>
-
-        <!-- Right side: tools, settings, user -->
-        <div class="nav-right">
-
-            <!-- Tools Group -->
-            <div class="nav-right-group" id="toolsGroup">
-
-                <!-- Contractor button -->
-                <div style="position:relative" title="المقاولون">
-                    <div class="nav-icon-btn" id="contractorBtn" onclick="togglePanel('contractorPanel')">👷</div>
-                    <div class="contractor-panel" id="contractorPanel">
-                        <div class="contractor-panel-header" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-                            <span>👷 المقاولون</span>
-                            <div style="display:flex;background:rgba(255,255,255,0.12);border-radius:8px;padding:2px;gap:1px;">
-                                <button id="cTabContractor" onclick="switchContractorTab('contractor')"
-                                    style="padding:4px 10px;border:none;border-radius:6px;font-size:10px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;transition:all 0.18s;background:rgba(255,255,255,0.9);color:#6a2d91;">
-                                    حسب المقاول
-                                </button>
-                                <button id="cTabGroup" onclick="switchContractorTab('group')"
-                                    style="padding:4px 10px;border:none;border-radius:6px;font-size:10px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;transition:all 0.18s;background:transparent;color:rgba(255,255,255,0.75);">
-                                    حسب المجموعة
-                                </button>
-                            </div>
-                        </div>
-                        <!-- Tab: by contractor -->
-                        <div id="contractorTabContractor">
-                            <div class="contractor-list" id="contractorList">
-                                <div class="contractor-empty">جاري التحميل...</div>
-                            </div>
-                        </div>
-                        <!-- Tab: by group -->
-                        <div id="contractorTabGroup" style="display:none;">
-                            <div class="contractor-list" id="contractorGroupList">
-                                <div class="contractor-empty">جاري التحميل...</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Notification bell -->
-                <div style="position:relative" title="الإشعارات">
-                    <div class="nav-icon-btn" id="notifBtn" onclick="togglePanel('notifPanel')">
-                        🔔
-                        <span class="notif-badge" id="notifBadge" style="display:none">!</span>
-                    </div>
-                    <div class="notif-panel" id="notifPanel">
-                        <div class="notif-panel-header">🔔 الإشعارات</div>
-                        <div id="notifList"><div class="notif-empty">جاري التحميل...</div></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="nav-right-divider"></div>
-
-            <!-- Settings Group -->
-            <div class="nav-right-group" id="settingsGroup">
-                <!-- Settings button (admin only) -->
-                <div style="position:relative" class="admin-only" id="settingsBtnWrap" title="الإعدادات">
-                    <div class="nav-icon-btn" id="settingsBtn" onclick="togglePanel('settingsPanel')">⚙️</div>
-                    <div class="settings-panel" id="settingsPanel">
-                        <div class="settings-panel-header">
-                            ⚙️ الإعدادات — مدير النظام
-                        </div>
-                        <div class="settings-tabs">
-                            <button class="settings-tab active" onclick="switchSettingsTab('coords')">📍 الإحداثيات</button>
-                            <button class="settings-tab" onclick="switchSettingsTab('default')">🏁 البند الافتراضي</button>
-                            <button class="settings-tab" onclick="switchSettingsTab('similar')">🔗 البنود المتشابهة</button>
-                            <button class="settings-tab" onclick="switchSettingsTab('eqtypes')">🚜 أنواع المعدات</button>
-                        </div>
-                        <div class="settings-body">
-                            <!-- Tab: Default Coordinates -->
-                            <div class="settings-section active" id="settingsTabCoords">
-                                <div class="settings-field">
-                                    <label class="settings-label">خط العرض (Latitude)</label>
-                                    <input type="text" class="settings-input" id="settingsLat" placeholder="21.292">
-                                </div>
-                                <div class="settings-field">
-                                    <label class="settings-label">خط الطول (Longitude)</label>
-                                    <input type="text" class="settings-input" id="settingsLng" placeholder="39.71">
-                                </div>
-                                <div class="settings-field">
-                                    <label class="settings-label">مستوى التكبير (Zoom)</label>
-                                    <input type="text" class="settings-input" id="settingsZoom" placeholder="14">
-                                </div>
-                                <button class="settings-save-btn" onclick="saveSettingsCoords()">✓ حفظ وتطبيق</button>
-                            </div>
-                            <!-- Tab: Default Subitem -->
-                            <div class="settings-section" id="settingsTabDefault">
-                                <div style="font-size:11px;color:var(--text-soft);text-align:right;line-height:1.6;background:rgba(106,45,145,0.05);padding:8px 10px;border-radius:7px;border-right:3px solid var(--purple);margin-bottom:4px;">
-                                    رقم البند الفرعي الذي يُحمَّل تلقائياً عند فتح النظام لأول مرة (قبل أي اختيار من المستخدم).
-                                </div>
-                                <div class="settings-field">
-                                    <label class="settings-label">رقم البند الافتراضي</label>
-                                    <input type="text" class="settings-input" id="settingsDefaultSub" placeholder="مثال: 1-1 أو A-01-02">
-                                </div>
-                                <div id="settingsDefaultSubPreview" style="font-size:11px;color:var(--text-soft);text-align:right;padding:6px 8px;border-radius:6px;background:rgba(106,45,145,0.05);display:none;"></div>
-                                <button class="settings-save-btn" onclick="saveSettingsDefaultSub()">✓ حفظ وتطبيق</button>
-                            </div>
-                            <!-- Tab: Similar Items -->
-                            <div class="settings-section" id="settingsTabSimilar">
-                                <div style="font-size:11px;color:var(--text-soft);text-align:right;line-height:1.6;background:rgba(106,45,145,0.05);padding:8px 10px;border-radius:7px;border-right:3px solid var(--purple);">
-                                    حدد مجموعات البنود المتشابهة — البنود في نفس المجموعة يمكن اختيارها معاً على الخريطة، بينما لا يمكن الجمع بين بندين من مجموعتين مختلفتين.
-                                </div>
-                                <div class="similar-groups-list" id="similarGroupsList"></div>
-                                <button class="settings-add-group-btn" onclick="openSimilarGroupModal()">+ إضافة مجموعة بنود متشابهة</button>
-                            </div>
-                            <!-- Tab: Equipment Types -->
-                            <div class="settings-section" id="settingsTabEqtypes">
-                                <div style="font-size:11px;color:var(--text-soft);text-align:right;line-height:1.6;background:rgba(39,174,106,0.07);padding:8px 10px;border-radius:7px;border-right:3px solid #27ae6a;margin-bottom:2px;">
-                                    أنواع المعدات التي تظهر في قائمة الاقتراحات عند تسجيل المعدات — تُحفظ في <strong>categories.json</strong> وتشمل جميع المستخدمين.
-                                </div>
-                                <!-- Add new type row -->
-                                <div style="display:flex;gap:7px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);margin-bottom:8px;">
-                                    <input type="text" id="eqTypeNewInput" class="settings-input"
-                                        placeholder="اسم المعدة الجديدة..."
-                                        style="flex:1;"
-                                        onkeydown="if(event.key==='Enter') addEquipmentType()">
-                                    <button onclick="addEquipmentType()"
-                                        style="background:linear-gradient(135deg,#27ae6a,#1a7a4a);border:none;color:white;padding:7px 13px;border-radius:7px;font-size:12px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all 0.2s;"
-                                        onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
-                                        ＋ إضافة
-                                    </button>
-                                </div>
-                                <!-- Import multiple types -->
-                                <details style="margin-bottom:8px;">
-                                    <summary style="font-size:11px;font-weight:700;color:var(--text-soft);cursor:pointer;padding:4px 0;user-select:none;">📥 إضافة متعددة (فصل بفاصلة أو سطر جديد)</summary>
-                                    <div style="margin-top:6px;display:flex;flex-direction:column;gap:5px;">
-                                        <textarea id="eqTypesImportArea"
-                                            placeholder="حفار, لودر, بلدوزر&#10;أو كل نوع في سطر..."
-                                            style="width:100%;height:70px;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;font-family:'Cairo',sans-serif;color:var(--text);background:var(--white);text-align:right;resize:vertical;outline:none;direction:rtl;"
-                                            onfocus="this.style.borderColor='var(--purple)'"
-                                            onblur="this.style.borderColor='var(--border)'"></textarea>
-                                        <button onclick="importEquipmentTypesFromCSV()"
-                                            style="align-self:flex-start;background:rgba(39,174,106,0.1);border:1px solid rgba(39,174,106,0.4);color:#27ae6a;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;transition:all 0.2s;">
-                                            ＋ إضافة الكل
-                                        </button>
-                                    </div>
-                                </details>
-                                <!-- List of types -->
-                                <div id="eqTypesList" style="max-height:240px;overflow-y:auto;padding-right:2px;">
-                                    <div style="text-align:center;color:var(--text-soft);font-size:11px;padding:12px 0;">افتح الإعدادات لتحميل القائمة</div>
-                                </div>
-                                <!-- Footer actions -->
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);gap:8px;flex-wrap:wrap;">
-                                    <span id="eqTypesCount" style="font-size:10px;color:var(--text-soft);font-weight:600;"></span>
-                                    <button onclick="resetEquipmentTypesToDefault()"
-                                        style="background:rgba(244,67,54,0.07);border:1px solid rgba(244,67,54,0.25);color:#e53935;padding:5px 10px;border-radius:6px;font-size:10px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;transition:all 0.2s;white-space:nowrap;">
-                                        🗑 مسح الكل
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Theme button -->
-                <div style="position:relative" title="تغيير الثيم">
-                    <div class="nav-icon-btn" id="themeBtn" onclick="togglePanel('themePanel')">🎨</div>
-                    <div class="theme-panel" id="themePanel">
-                        <div class="theme-panel-header">🎨 الثيمات</div>
-                        <div class="theme-option active" data-theme="" onclick="applyTheme('')">
-                            <div class="theme-swatch" style="background:linear-gradient(135deg,#6a2d91,#8b44b8)"></div>
-                            <span class="theme-label">البنفسجي الملكي (افتراضي)</span>
-                        </div>
-                        <div class="theme-option" data-theme="ocean" onclick="applyTheme('ocean')">
-                            <div class="theme-swatch" style="background:linear-gradient(135deg,#0d5c8a,#1a7bbf)"></div>
-                            <span class="theme-label">الأزرق المحيطي</span>
-                        </div>
-                        <div class="theme-option" data-theme="dark" onclick="applyTheme('dark')">
-                            <div class="theme-swatch" style="background:linear-gradient(135deg,#1a1a2e,#3d2060)"></div>
-                            <span class="theme-label">الوضع الداكن</span>
-                        </div>
-                        <div class="theme-option" data-theme="emerald" onclick="applyTheme('emerald')">
-                            <div class="theme-swatch" style="background:linear-gradient(135deg,#1a7a4a,#27ae6a)"></div>
-                            <span class="theme-label">الزمرد الأخضر</span>
-                        </div>
-                        <div class="theme-option" data-theme="sunset" onclick="applyTheme('sunset')">
-                            <div class="theme-swatch" style="background:linear-gradient(135deg,#c0392b,#e74c3c)"></div>
-                            <span class="theme-label">الغروب الأحمر</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Coords panel removed — now lives in ⚙️ Settings panel -->
-            </div>
-
-            <div class="nav-right-divider"></div>
-
-            <!-- User Group -->
-            <div class="nav-right-group" id="userGroup">
-                <!-- User chip + dropdown -->
-                <div class="user-menu-wrap" id="userMenuWrap">
-                    <div class="user-chip" onclick="togglePanel('userDropdown')">
-                        <div class="user-avatar" id="navAvatar">؟</div>
-                        <span class="user-name-small" id="navUserName">-</span>
-                    </div>
-                    <div class="user-dropdown" id="userDropdown">
-                        <div class="user-dropdown-header">
-                            <div class="ud-avatar-wrap" id="udAvatarWrap" onclick="triggerAvatarUpload()">
-                                <span id="udAvatarText">؟</span>
-                                <div class="ud-avatar-overlay">📷</div>
-                            </div>
-                            <div class="ud-name" id="udName">-</div>
-                            <div class="ud-role" id="udRole">-</div>
-                        </div>
-                        <div class="ud-field">
-                            <label>الاسم</label>
-                            <input type="text" id="udNameInput" placeholder="الاسم الكامل">
-                        </div>
-                        <div class="ud-field">
-                            <label>كلمة مرور جديدة</label>
-                            <input type="password" id="udPassInput" placeholder="اتركها فارغة إذا لم تريد التغيير">
-                        </div>
-                        <button class="ud-save-btn" onclick="saveUserProfile()">💾 حفظ التغييرات</button>
-                        <button class="ud-logout" onclick="doLogout()">🚪 تسجيل الخروج</button>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    </div>
-
-    <!-- MAIN CONTENT -->
-    <div class="main-content">
-
-        <!-- LEFT SECTION -->
-        <div class="left-section">
-
-            <!-- STATS + SEARCH BAR -->
-            <div class="stats-search-bar">
-                <div class="stats-row">
-                    <div class="stats-wrapper" id="statsWrapper"></div>
-                </div>
-                <div class="search-row">
-                    <div class="search-wrap" style="flex:1;position:relative">
-                        <span class="search-icon">🔍</span>
-                        <input type="text" class="search-input" id="searchInput" placeholder="ابحث بالاسم...">
-                        <div class="search-dropdown" id="searchDropdown"></div>
-                    </div>
-                    <!-- Progress Ring -->
-                    <div class="progress-ring-wrap" id="progressRingWrap">
-                        <svg class="progress-ring-svg" width="38" height="38" viewBox="0 0 38 38">
-                            <circle class="progress-ring-circle-bg" cx="19" cy="19" r="15"/>
-                            <circle class="progress-ring-circle" id="progressRingCircle" cx="19" cy="19" r="15"
-                                stroke-dasharray="94.25" stroke-dashoffset="94.25"/>
-                        </svg>
-                        <div class="progress-ring-text">
-                            <span class="progress-ring-pct" id="progressRingPct">0%</span>
-                            <span class="progress-ring-label">نسبة التنفيذ</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="map"></div>
-        </div>
-
-        <!-- RIGHT SIDEBAR -->
-        <div class="right-sidebar">
-            <div class="sidebar-header">
-                <div class="sidebar-header-title">📋 البنود</div>
-                <div class="admin-btns admin-only">
-                    <button class="hdr-btn export-btn" onclick="exportConfig()">⬇</button>
-                    <button class="hdr-btn" onclick="openAddCategoryModal()">+ بند</button>
-                    <button class="hdr-btn" onclick="openAddSubitemModal()">+ فرعي</button>
-                </div>
-            </div>
-
-            <div class="items-section" id="itemsSection"></div>
-
-            <div class="legend-section">
-                <div class="legend-title">📋 حالات التنفيذ</div>
-                <div class="legend-item">
-                    <div class="legend-color color-ongoing"></div>
-                    <label class="legend-label">جاري التنفيذ</label>
-                    <input type="checkbox" class="status-checkbox" data-status="جاري" checked>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color color-available"></div>
-                    <label class="legend-label">متاح للتنفيذ</label>
-                    <input type="checkbox" class="status-checkbox" data-status="متاح" checked>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color color-unavailable"></div>
-                    <label class="legend-label">غير متاح</label>
-                    <input type="checkbox" class="status-checkbox" data-status="غير متاح" checked>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color color-completed"></div>
-                    <label class="legend-label">تم الانتهاء</label>
-                    <input type="checkbox" class="status-checkbox" data-status="تم الانتهاء" checked>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color color-stopped"></div>
-                    <label class="legend-label">متوقف</label>
-                    <input type="checkbox" class="status-checkbox" data-status="متوقف" checked>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- MODAL: ADD CATEGORY -->
-<div class="modal" id="modalAddCategory">
-    <div class="modal-box">
-        <div class="modal-title">➕ إضافة بند رئيسي</div>
-        <div class="modal-field">
-            <label>رقم البند</label>
-            <input type="text" id="inCatNumber" placeholder="مثال: 1 أو A-01">
-        </div>
-        <div class="modal-field">
-            <label>اسم البند</label>
-            <input type="text" id="inCatName" placeholder="مثال: الطرق">
-        </div>
-        <div class="modal-field">
-            <label>رمز (Emoji)</label>
-            <input type="text" id="inCatEmoji" placeholder="📍" maxlength="4" value="📍">
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closeModal('modalAddCategory')">إلغاء</button>
-            <button class="btn btn-primary" onclick="addCategory()">إضافة</button>
-        </div>
-    </div>
-</div>
-
-<!-- MODAL: ADD SUBITEM -->
-<div class="modal" id="modalAddSubitem">
-    <div class="modal-box">
-        <div class="modal-title">➕ إضافة بند فرعي</div>
-        <div class="modal-field">
-            <label>البند الرئيسي</label>
-            <select id="inSubCat"><option value="">-- اختر --</option></select>
-        </div>
-        <div class="modal-field">
-            <label>رقم البند الفرعي</label>
-            <input type="text" id="inSubNumber" placeholder="مثال: 1-1 أو A-01-02">
-        </div>
-        <div class="modal-field">
-            <label>اسم الفرعي</label>
-            <input type="text" id="inSubName" placeholder="مثال: الردم">
-        </div>
-        <div class="modal-field">
-            <label>رابط Google Sheet</label>
-            <input type="text" id="inSubSheet" placeholder="https://docs.google.com/spreadsheets/d/...">
-        </div>
-        <div class="modal-field">
-            <label>ملف GeoJSON</label>
-            <input type="text" id="inSubGeo" placeholder="ROADS.geojson">
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closeModal('modalAddSubitem')">إلغاء</button>
-            <button class="btn btn-primary" onclick="addSubitem()">إضافة</button>
-        </div>
-    </div>
-</div>
-
-<!-- MODAL: EDIT SUBITEM (double-click, admin only) -->
-<div class="modal" id="modalEditSubitem">
-    <div class="modal-box">
-        <div class="modal-title">✏️ تعديل البند الفرعي</div>
-        <input type="hidden" id="editSubCatId">
-        <input type="hidden" id="editSubId">
-        <div class="modal-field">
-            <label>رقم البند الفرعي</label>
-            <input type="text" id="editSubNumber" placeholder="مثال: 1-1">
-        </div>
-        <div class="modal-field">
-            <label>اسم البند الفرعي</label>
-            <input type="text" id="editSubName" placeholder="مثال: الردم">
-        </div>
-        <div class="modal-field">
-            <label>رابط Google Sheet</label>
-            <input type="text" id="editSubSheet" placeholder="https://docs.google.com/spreadsheets/d/...">
-            <div style="margin-top:5px;display:flex;gap:6px;flex-wrap:wrap;">
-                <a id="editSubSheetLink" href="#" target="_blank"
-                   style="font-size:11px;color:var(--purple);font-weight:700;text-decoration:none;display:none;
-                          padding:4px 10px;background:rgba(106,45,145,0.08);border-radius:5px;border:1px solid rgba(106,45,145,0.2);transition:background 0.2s;"
-                   onmouseover="this.style.background='rgba(106,45,145,0.16)'"
-                   onmouseout="this.style.background='rgba(106,45,145,0.08)'">
-                   🔗 فتح الشيت
-                </a>
-            </div>
-        </div>
-        <div class="modal-field">
-            <label>ملف GeoJSON</label>
-            <input type="text" id="editSubGeo" placeholder="ROADS.geojson">
-        </div>
-        <div class="modal-field">
-            <label>🚜 رابط سكريبت تسجيل الكمية - المعدات (Apps Script)</label>
-            <input type="text" id="editSubScriptUrl"
-                placeholder="https://script.google.com/macros/s/..."
-                style="font-size:11px;"
-                onfocus="this.style.borderColor='rgba(39,174,106,0.6)'"
-                onblur="this.style.borderColor=''">
-            <div style="margin-top:4px;font-size:10px;color:var(--text-soft);text-align:right;line-height:1.6;">
-                رابط Web App الخاص بتسجيل المعدات لهذا البند
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closeModal('modalEditSubitem')">إلغاء</button>
-            <button class="btn btn-primary" onclick="saveSubitemEdit()">💾 حفظ</button>
-        </div>
-    </div>
-</div>
-<div class="modal" id="cashflowModal" style="z-index:60000;padding:24px;align-items:center;justify-content:center;">
-    <div class="cf-modal-overlay" onclick="closeCashflowModal()" style="position:fixed;inset:0;"></div>
-    <div class="cf-modal-wrap">
-
-        <!-- Modal Header -->
-        <div class="cf-header">
-            <div class="cf-header-left">
-                <div class="cf-header-icon">💰</div>
-                <div>
-                    <div class="cf-header-title">لوحة التدفقات النقدية</div>
-                    <div class="cf-header-sub" id="cfLastUpdate">جاري التحميل...</div>
-                </div>
-            </div>
-            <div class="cf-header-actions">
-                <div class="cf-tab-pills">
-                    <button class="cf-tab-pill active" data-tab="contractors" onclick="switchCfTab('contractors')">
-                        <span class="cf-tab-icon">👷</span> المقاولون
-                    </button>
-                    <button class="cf-tab-pill" data-tab="company" onclick="switchCfTab('company')">
-                        <span class="cf-tab-icon">🏢</span> الشركة
-                    </button>
-                </div>
-                <button class="cf-close-btn" onclick="closeCashflowModal()" title="إغلاق">✕</button>
-            </div>
-        </div>
-
-        <!-- KPI Summary Row -->
-        <div class="cf-kpi-row" id="cfKpiRow">
-            <div class="cf-kpi-card cf-kpi-total">
-                <div class="cf-kpi-label">القيمة الإجمالية</div>
-                <div class="cf-kpi-value" id="cfKpiTotal">—</div>
-            </div>
-            <div class="cf-kpi-card cf-kpi-paid">
-                <div class="cf-kpi-label">المدفوع</div>
-                <div class="cf-kpi-value" id="cfKpiPaid">—</div>
-            </div>
-            <div class="cf-kpi-card cf-kpi-remaining">
-                <div class="cf-kpi-label">المتبقي</div>
-                <div class="cf-kpi-value" id="cfKpiRemaining">—</div>
-            </div>
-            <div class="cf-kpi-card cf-kpi-pct">
-                <div class="cf-kpi-label">نسبة الصرف</div>
-                <div class="cf-kpi-value" id="cfKpiPct">—</div>
-                <div class="cf-kpi-bar-wrap">
-                    <div class="cf-kpi-bar" id="cfKpiBar" style="width:0%"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tab Content -->
-        <div class="cf-body">
-            <div class="cf-content active" id="cf-contractors">
-                <div class="cf-loading">⏳ جاري تحميل بيانات المقاولين...</div>
-            </div>
-            <div class="cf-content" id="cf-company">
-                <div class="cf-loading">⏳ جاري تحميل بيانات الشركة...</div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- MODAL: SIMILAR GROUPS -->
-<div id="similarGroupModal" style="display:none;position:fixed;inset:0;z-index:70000;align-items:center;justify-content:center;">
-    <div class="similar-modal-overlay" onclick="closeSimilarGroupModal()" style="position:fixed;inset:0;z-index:1;"></div>
-    <div class="similar-modal-box" style="position:relative;z-index:2;">
-        <div class="similar-modal-header">
-            <div class="similar-modal-title">🔗 إضافة مجموعة بنود متشابهة</div>
-            <button class="similar-modal-close" onclick="closeSimilarGroupModal()">✕</button>
-        </div>
-        <div class="similar-modal-body">
-            <div class="similar-modal-group-name-field">
-                <label>اسم المجموعة (اختياري)</label>
-                <input type="text" id="similarGroupNameInput" placeholder="مثال: الطرق والأرصفة">
-            </div>
-            <span class="similar-select-label">اختر البنود الفرعية التي تنتمي لهذه المجموعة:</span>
-            <div class="similar-subitems-grid" id="similarSubitemsGrid"></div>
-        </div>
-        <div class="similar-modal-footer">
-            <button class="btn btn-secondary" onclick="closeSimilarGroupModal()">إلغاء</button>
-            <button class="btn btn-primary" onclick="saveSimilarGroup()">✓ حفظ المجموعة</button>
-        </div>
-    </div>
-</div>
-
-<!-- Hidden file inputs -->
-
-<input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importConfig(event)">
-<input type="file" id="avatarFileInput" accept="image/*" style="display:none" onchange="handleAvatarUpload(event)">
-
-<!-- MODAL: BILLS DASHBOARD -->
-<div class="modal" id="billsModal" style="z-index:60001;padding:24px;align-items:center;justify-content:center;">
-    <div class="bd-modal-overlay" onclick="closeBillsModal()" style="position:fixed;inset:0;"></div>
-    <div class="bd-modal-wrap">
-
-        <!-- Header -->
-        <div class="bd-hdr">
-            <div class="bd-hdr-left">
-                <div class="bd-hdr-icon">📊</div>
-                <div>
-                    <div class="bd-hdr-title">داشبورد البنود</div>
-                    <div class="bd-hdr-sub" id="bdLastUpdate">جاري التحميل...</div>
-                </div>
-            </div>
-            <input class="bd-search-inp" type="text" id="bdSearchInput"
-                placeholder="🔍 ابحث برقم البند أو الاسم..."
-                oninput="bdFilterRows()">
-            <button class="cf-close-btn" onclick="closeBillsModal()">✕</button>
-        </div>
-
-        <!-- KPI Row -->
-        <div class="bd-kpi-row-wrap">
-            <div class="bd-kpi-c">
-                <div class="bd-kpi-lbl">إجمالي القيمة</div>
-                <div class="bd-kpi-val" id="bdKpiTotalVal">—</div>
-                <div class="bd-kpi-unit">ريال سعودي</div>
-            </div>
-            <div class="bd-kpi-c">
-                <div class="bd-kpi-lbl">القيمة المنفذة</div>
-                <div class="bd-kpi-val" id="bdKpiDoneVal">—</div>
-                <div class="bd-kpi-unit" id="bdKpiDoneUnit">—</div>
-                <div class="bd-kpi-bw"><div class="bd-kpi-b" id="bdKpiDoneBar" style="background:linear-gradient(90deg,#27ae60,#1e8449);width:0%"></div></div>
-            </div>
-            <div class="bd-kpi-c">
-                <div class="bd-kpi-lbl">القيمة المتبقية</div>
-                <div class="bd-kpi-val" id="bdKpiRemVal">—</div>
-                <div class="bd-kpi-unit">ريال سعودي</div>
-            </div>
-            <div class="bd-kpi-c">
-                <div class="bd-kpi-lbl">نسبة التنفيذ</div>
-                <div class="bd-kpi-val" id="bdKpiPct">—</div>
-                <div class="bd-kpi-unit">إجمالي البنود: <span id="bdKpiCount">—</span></div>
-                <div class="bd-kpi-bw"><div class="bd-kpi-b" id="bdKpiPctBar" style="width:0%"></div></div>
-            </div>
-        </div>
-
-        <!-- Body / Table -->
-        <div class="bd-body-wrap">
-            <div class="bd-status-row">
-                <div class="bd-cnt-badge" id="bdCountBadge">جاري التحميل...</div>
-                <div style="font-size:10px;color:rgba(255,255,255,0.3);font-family:'Cairo',sans-serif;">الربط: رقم البند ← بيانات الشيت</div>
-            </div>
-            <div class="bd-tbl-wrap" id="bdTableWrap">
-                <div class="bd-msg bd-msg-load">⏳ جاري تحميل بيانات البنود...</div>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="bd-footer-bar">
-            <div class="bd-footer-note" id="bdFooterNote">مصدر البيانات: Google Sheets</div>
-            <button class="bd-refresh-btn" onclick="loadBillsData()">🔄 تحديث البيانات</button>
-        </div>
-    </div>
-</div>
-
-<!-- MODAL: EQUIPMENT -->
-<!-- ==================== MODAL: EQUIPMENT REGISTRATION FORM ==================== -->
-<!-- استبدل كامل مودال equipmentFormModal في index.html بهذا الكود -->
-
-<div class="modal" id="equipmentFormModal" style="z-index:65000;padding:20px;align-items:center;justify-content:center;">
-    <div class="bd-modal-overlay" onclick="closeEquipmentFormModal()" style="position:fixed;inset:0;"></div>
-    <div style="position:relative;z-index:2;display:flex;flex-direction:column;width:min(800px,96vw);max-height:calc(100vh - 40px);background:#0d0d1a;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,0.07);box-shadow:0 32px 80px rgba(0,0,0,0.7);animation:cfSlideIn 0.28s cubic-bezier(0.34,1.2,0.64,1);">
-
-        <!-- ══ Header ══ -->
-        <div style="background:linear-gradient(135deg,#0a2a1a 0%,#1a6040 50%,#0d3d2a 100%);padding:18px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;gap:12px;">
-            <div style="display:flex;align-items:center;gap:14px;">
-                <div style="width:44px;height:44px;background:linear-gradient(135deg,#27ae6a,#1a7a4a);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;box-shadow:0 4px 16px rgba(39,174,106,0.35);">🚜</div>
-                <div>
-                    <div style="font-size:17px;font-weight:900;color:white;font-family:'Cairo',sans-serif;">تسجيل الكمية - المعدات</div>
-                </div>
-            </div>
-            <!-- Tab Pills -->
-            <div style="display:flex;background:rgba(0,0,0,0.35);border-radius:10px;padding:3px;gap:2px;margin-right:auto;margin-left:12px;">
-                <button id="eqfTabDaily" onclick="eqSwitchFormTab('daily')"
-                    style="padding:7px 16px;border:none;border-radius:8px;font-size:12px;font-weight:900;font-family:'Cairo',sans-serif;cursor:pointer;transition:all 0.2s;background:rgba(255,255,255,0.9);color:#1a6040;white-space:nowrap;">
-                    🚜 المنفذ اليومي - المعدات
-                </button>
-                <button id="eqfTabCumul" onclick="eqSwitchFormTab('cumulative')"
-                    style="padding:7px 16px;border:none;border-radius:8px;font-size:12px;font-weight:900;font-family:'Cairo',sans-serif;cursor:pointer;transition:all 0.2s;background:transparent;color:rgba(255,255,255,0.65);white-space:nowrap;">
-                    📊 الكمية التراكمية
-                </button>
-            </div>
-            <button class="cf-close-btn" onclick="closeEquipmentFormModal()" title="إغلاق">✕</button>
-        </div>
-
-        <!-- ══════════════════════════════════════
-             تبويب 1: المعدات (اليومي) — الأصلي
-             ══════════════════════════════════════ -->
-        <div id="eqfBodyDaily" style="flex:1;overflow-y:auto;padding:20px 24px;">
-
-            <!-- عنصر البحث + اختيار من الخريطة -->
-            <div style="margin-bottom:16px;">
-                <div class="eq-form-field">
-                    <label class="eq-form-label">📍 اسم العنصر</label>
-                    <div style="display:flex;gap:8px;align-items:center;">
-                        <div style="position:relative;flex:1;">
-                            <input type="text" id="eqf_element_search" class="eq-form-input"
-                                placeholder="ابحث باسم العنصر أو اختر من القائمة..."
-                                oninput="eqFilterElementDropdown()"
-                                onfocus="eqShowElementDropdown()"
-                                autocomplete="off"
-                                style="padding-left:32px;">
-                            <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:14px;opacity:0.4;pointer-events:none;">🔍</span>
-                            <div id="eqf_element_dropdown"
-                                style="display:none;position:absolute;top:calc(100% + 4px);right:0;left:0;background:#1a1a2e;border:1px solid rgba(39,174,106,0.4);border-radius:10px;z-index:9999;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.5);">
-                            </div>
-                        </div>
-                        <button onclick="eqPickFromMap()" id="eqf_pick_btn"
-                            title="اختر عنصراً من الخريطة"
-                            style="flex-shrink:0;padding:10px 14px;background:linear-gradient(135deg,#1a4a8a,#2196f3);border:none;border-radius:9px;color:white;font-size:13px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:all 0.2s;box-shadow:0 2px 10px rgba(33,150,243,0.35);">
-                            🗺 من الخريطة
-                        </button>
-                    </div>
-                    <div id="eqf_element_info" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(39,174,106,0.1);border:1px solid rgba(39,174,106,0.3);border-radius:8px;align-items:center;gap:10px;">
-                        <span style="font-size:16px;">✅</span>
-                        <div style="flex:1;">
-                            <div id="eqf_element_info_name" style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.9);font-family:'Cairo',sans-serif;"></div>
-                            <div id="eqf_element_info_id" style="font-size:10px;color:rgba(255,255,255,0.45);font-family:'Cairo',sans-serif;margin-top:2px;"></div>
-                        </div>
-                        <button onclick="eqClearElement()" style="background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:16px;padding:2px 6px;">✕</button>
-                    </div>
-                    <input type="hidden" id="eqf_element_id">
-                    <input type="hidden" id="eqf_element_name">
-                </div>
-            </div>
-
-            <!-- Group + Category -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
-                <div class="eq-form-field">
-                    <label class="eq-form-label">🗂 المجموعة</label>
-                    <input type="text" id="eqf_group_name" class="eq-form-input" readonly placeholder="—" style="opacity:0.65;cursor:default;background:rgba(255,255,255,0.03);">
-                    <input type="hidden" id="eqf_group_id">
-                </div>
-                <div class="eq-form-field">
-                    <label class="eq-form-label">📁 البند الرئيسي</label>
-                    <input type="text" id="eqf_cat_name" class="eq-form-input" readonly placeholder="—" style="opacity:0.65;cursor:default;background:rgba(255,255,255,0.03);">
-                    <input type="hidden" id="eqf_cat_id">
-                </div>
-            </div>
-
-            <!-- البند + المقاول -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
-                <div class="eq-form-field">
-                    <label class="eq-form-label">📋 البند</label>
-                    <input type="hidden" id="eqf_item_name">
-                    <input type="hidden" id="eqf_band_sheet">
-                    <input type="text" id="eqf_band_display" class="eq-form-input" readonly
-                        placeholder="يُملأ تلقائياً عند اختيار العنصر"
-                        style="opacity:0.7;cursor:default;background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.08);">
-                </div>
-                <div class="eq-form-field">
-                    <label class="eq-form-label">👷 المقاول</label>
-                    <select id="eqf_contractor" class="eq-form-input" style="cursor:pointer;appearance:auto;-webkit-appearance:auto;">
-                        <option value="">-- اختر المقاول --</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- التاريخ + الكمية المنفذة -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
-                <div class="eq-form-field">
-                    <label class="eq-form-label">📅 التاريخ</label>
-                    <input type="date" id="eqf_date" class="eq-form-input">
-                </div>
-                <div class="eq-form-field">
-                    <label class="eq-form-label">📦 الكمية المنفذة</label>
-                    <input type="number" id="eqf_done_qty" placeholder="0.00" min="0" step="0.01" class="eq-form-input">
-                </div>
-            </div>
-
-            <!-- أنواع المعدات -->
-            <div style="border:1px solid rgba(39,174,106,0.25);border-radius:12px;overflow:hidden;margin-bottom:16px;">
-                <div style="background:linear-gradient(135deg,rgba(39,174,106,0.15),rgba(26,122,74,0.1));padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(39,174,106,0.15);">
-                    <span style="font-size:13px;font-weight:800;color:rgba(255,255,255,0.9);font-family:'Cairo',sans-serif;">🚜 أنواع المعدات</span>
-                    <button onclick="eqAddEquipmentRow()" class="eq-add-eq-btn">＋ إضافة معدة</button>
-                </div>
-                <div id="eqf_equipments_container" style="padding:12px 16px;display:flex;flex-direction:column;gap:10px;min-height:60px;"></div>
-            </div>
-
-            <div id="eqf_feedback" style="display:none;padding:12px 16px;border-radius:10px;font-size:13px;font-weight:700;font-family:'Cairo',sans-serif;text-align:center;margin-bottom:8px;"></div>
-        </div>
-
-        <!-- ══════════════════════════════════════
-             تبويب 2: الكمية التراكمية
-             ══════════════════════════════════════ -->
-        <div id="eqfBodyCumul" style="display:none;flex:1;overflow-y:auto;padding:20px 24px;">
-           
-            <!-- عنصر البحث + اختيار من الخريطة -->
-            <div style="margin-bottom:16px;">
-                <div class="eq-form-field">
-                    <label class="eq-form-label">📍 اسم العنصر</label>
-                    <div style="display:flex;gap:8px;align-items:center;">
-                        <div style="position:relative;flex:1;">
-                            <input type="text" id="eqfc_element_search" class="eq-form-input"
-                                placeholder="ابحث باسم العنصر أو اختر من القائمة..."
-                                oninput="eqFilterCumulElementDropdown()"
-                                onfocus="eqBuildElementsList();eqFilterCumulElementDropdown()"
-                                autocomplete="off"
-                                style="padding-left:32px;">
-                            <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:14px;opacity:0.4;pointer-events:none;">🔍</span>
-                            <div id="eqfc_element_dropdown"
-                                style="display:none;position:absolute;top:calc(100% + 4px);right:0;left:0;background:#1a1a2e;border:1px solid rgba(33,150,243,0.4);border-radius:10px;z-index:9999;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.5);">
-                            </div>
-                        </div>
-                        <button onclick="eqPickFromMapCumul()" id="eqfc_pick_btn"
-                            title="اختر عنصراً من الخريطة"
-                            style="flex-shrink:0;padding:10px 14px;background:linear-gradient(135deg,#1a4a8a,#2196f3);border:none;border-radius:9px;color:white;font-size:13px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:all 0.2s;box-shadow:0 2px 10px rgba(33,150,243,0.35);">
-                            🗺 من الخريطة
-                        </button>
-                    </div>
-                    <div id="eqfc_element_info" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(33,150,243,0.1);border:1px solid rgba(33,150,243,0.3);border-radius:8px;align-items:center;gap:10px;">
-                        <span style="font-size:16px;">✅</span>
-                        <div style="flex:1;">
-                            <div id="eqfc_element_info_name" style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.9);font-family:'Cairo',sans-serif;"></div>
-                            <div id="eqfc_element_info_id" style="font-size:10px;color:rgba(255,255,255,0.45);font-family:'Cairo',sans-serif;margin-top:2px;"></div>
-                        </div>
-                        <button onclick="eqClearCumulElement()" style="background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:16px;padding:2px 6px;">✕</button>
-                    </div>
-                    <input type="hidden" id="eqfc_element_id">
-                    <input type="hidden" id="eqfc_element_name">
-                </div>
-            </div>
-
-            <!-- Group + Category -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
-                <div class="eq-form-field">
-                    <label class="eq-form-label">🗂 المجموعة</label>
-                    <input type="text" id="eqfc_group_name" class="eq-form-input" readonly placeholder="—" style="opacity:0.65;cursor:default;background:rgba(255,255,255,0.03);">
-                    <input type="hidden" id="eqfc_group_id">
-                </div>
-                <div class="eq-form-field">
-                    <label class="eq-form-label">📁 البند الرئيسي</label>
-                    <input type="text" id="eqfc_cat_name" class="eq-form-input" readonly placeholder="—" style="opacity:0.65;cursor:default;background:rgba(255,255,255,0.03);">
-                    <input type="hidden" id="eqfc_cat_id">
-                </div>
-            </div>
-
-            <!-- البند + المقاول -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
-                <div class="eq-form-field">
-                    <label class="eq-form-label">📋 البند</label>
-                    <input type="hidden" id="eqfc_item_name">
-                    <input type="hidden" id="eqfc_band_sheet">
-                    <input type="text" id="eqfc_band_display" class="eq-form-input" readonly
-                        placeholder="يُملأ تلقائياً عند اختيار العنصر"
-                        style="opacity:0.7;cursor:default;background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.08);">
-                </div>
-                <div class="eq-form-field">
-                    <label class="eq-form-label">👷 المقاول</label>
-                    <select id="eqfc_contractor" class="eq-form-input" style="cursor:pointer;appearance:auto;-webkit-appearance:auto;">
-                        <option value="">-- اختر المقاول --</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- التاريخ -->
-            <div style="margin-bottom:16px;">
-                <div class="eq-form-field">
-                    <label class="eq-form-label">📅 تاريخ الرفع / الريكويست</label>
-                    <input type="date" id="eqfc_date" class="eq-form-input" style="max-width:260px;">
-                </div>
-            </div>
-
-            <!-- الكميتان -->
-            <div style="border:1px solid rgba(33,150,243,0.25);border-radius:12px;overflow:hidden;margin-bottom:20px;">
-                <div style="background:linear-gradient(135deg,rgba(33,150,243,0.15),rgba(21,101,192,0.1));padding:12px 16px;border-bottom:1px solid rgba(33,150,243,0.15);">
-                    <span style="font-size:13px;font-weight:800;color:rgba(255,255,255,0.9);font-family:'Cairo',sans-serif;">📊 بيانات الكمية</span>
-                </div>
-                <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-
-                    <!-- الكمية الإجمالية -->
-                    <div class="eq-form-field">
-                        <label class="eq-form-label" style="color:rgba(255,200,66,0.9);">
-                            📐 الكمية الإجمالية
-                            <span style="font-size:9px;opacity:0.6;margin-right:4px;">(TOTAL-QTY)</span>
-                        </label>
-                        <input type="number" id="eqfc_total_qty" placeholder="0.00" min="0" step="0.01"
-                            class="eq-form-input"
-                            style="border-color:rgba(255,200,66,0.35);"
-                            onfocus="this.style.borderColor='rgba(255,200,66,0.75)'"
-                            onblur="this.style.borderColor='rgba(255,200,66,0.35)'">
-                    </div>
-
-                    <!-- الكمية المنفذة التراكمية -->
-                    <div class="eq-form-field">
-                        <label class="eq-form-label" style="color:rgba(39,200,100,0.9);">
-                            ✅ الكمية المنفذة التراكمية
-                            <span style="font-size:9px;opacity:0.6;margin-right:4px;">(DONE-QTY)</span>
-                        </label>
-                        <input type="number" id="eqfc_cumul_qty" placeholder="0.00" min="0" step="0.01"
-                            class="eq-form-input"
-                            style="border-color:rgba(39,200,100,0.35);"
-                            onfocus="this.style.borderColor='rgba(39,200,100,0.75)'"
-                            onblur="this.style.borderColor='rgba(39,200,100,0.35)'">
-                    </div>
-
-                </div>
-                
-            </div>
-
-            <div id="eqfc_feedback" style="display:none;padding:12px 16px;border-radius:10px;font-size:13px;font-weight:700;font-family:'Cairo',sans-serif;text-align:center;margin-bottom:8px;"></div>
-        </div>
-
-        <!-- ══ Footer مشترك ══ -->
-        <div style="background:rgba(0,0,0,0.25);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(255,255,255,0.05);flex-shrink:0;gap:12px;">
-            <button onclick="eqResetForm()" class="eq-reset-btn">🔄 إعادة تعيين</button>
-            <button onclick="eqSubmitForm()" id="eqf_submit_btn" class="eq-submit-btn">💾 حفظ في السجل</button>
-        </div>
-    </div>
-</div>
-<!-- ==================== MODAL: COMPANY CASHFLOW FORM ==================== -->
-<div class="modal" id="companyCashflowModal" style="z-index:65001;padding:20px;align-items:center;justify-content:center;">
-    <div class="bd-modal-overlay" onclick="closeCompanyCashflowForm()" style="position:fixed;inset:0;"></div>
-    <div style="position:relative;z-index:2;display:flex;flex-direction:column;width:min(560px,96vw);max-height:calc(100vh - 40px);background:#0d0d1a;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,0.07);box-shadow:0 32px 80px rgba(0,0,0,0.7);animation:cfSlideIn 0.28s cubic-bezier(0.34,1.2,0.64,1);">
-
-        <!-- Header -->
-        <div style="background:linear-gradient(135deg,#0d1f3c 0%,#1a4a8a 50%,#0a2a50 100%);padding:18px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
-            <div style="display:flex;align-items:center;gap:14px;">
-                <div style="width:44px;height:44px;background:linear-gradient(135deg,#2196f3,#1565c0);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 16px rgba(33,150,243,0.35);">🏢</div>
-                <div>
-                    <div style="font-size:17px;font-weight:900;color:white;font-family:'Cairo',sans-serif;">تسجيل تدفق نقدي — الشركة</div>
-                    <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;font-family:'Cairo',sans-serif;">إضافة مستخلص جديد للشركة</div>
-                </div>
-            </div>
-            <button class="cf-close-btn" onclick="closeCompanyCashflowForm()">✕</button>
-        </div>
-
-        <!-- Form Body -->
-        <div style="flex:1;overflow-y:auto;padding:24px;">
-
-            <!-- رقم المستخلص + التاريخ في صف واحد -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
-                <div id="ccf_statement_no_wrap">
-                    <label style="display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,0.55);margin-bottom:7px;font-family:'Cairo',sans-serif;letter-spacing:0.3px;">📄 رقم المستخلص</label>
-                    <input type="text" id="ccf_statement_no" class="eq-form-input" readonly style="cursor:not-allowed;opacity:0.75;background:rgba(255,255,255,0.03);border-color:rgba(245,200,66,0.4);" title="رقم تلقائي — للعرض فقط">
-                </div>
-                <div>
-                    <label style="display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,0.55);margin-bottom:7px;font-family:'Cairo',sans-serif;">📅 تاريخ المستخلص</label>
-                    <input type="date" id="ccf_date" class="eq-form-input">
-                </div>
-            </div>
-
-            <!-- قيمة المستخلص -->
-            <div style="margin-bottom:16px;">
-                <label style="display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,0.55);margin-bottom:7px;font-family:'Cairo',sans-serif;">💰 قيمة المستخلص (ريال سعودي)</label>
-                <input type="number" id="ccf_amount" placeholder="0.00" min="0" step="0.01" class="eq-form-input" oninput="ccfUpdatePreview()">
-            </div>
-
-            <!-- الحالة -->
-            <div style="margin-bottom:16px;">
-                <label style="display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,0.55);margin-bottom:7px;font-family:'Cairo',sans-serif;">📌 الحالة</label>
-                <select id="ccf_status" class="eq-form-input" style="cursor:pointer;appearance:auto;-webkit-appearance:auto;">
-                    <option value="مدفوع">مدفوع</option>
-                    <option value="معلق">معلق</option>
-                    <option value="جاري التدقيق">جاري التدقيق</option>
-                    <option value="جاهز للرفع">جاهز للرفع</option>
-                </select>
-            </div>
-
-            <!-- ملاحظات -->
-            <div style="margin-bottom:20px;">
-                <label style="display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,0.55);margin-bottom:7px;font-family:'Cairo',sans-serif;">📝 ملاحظات (اختياري)</label>
-                <textarea id="ccf_notes" placeholder="أي ملاحظات إضافية..." rows="3"
-                    style="width:100%;padding:10px 13px;background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.1);border-radius:9px;color:white;font-size:13px;font-family:'Cairo',sans-serif;outline:none;resize:vertical;text-align:right;direction:rtl;transition:border-color 0.2s;"
-                    onfocus="this.style.borderColor='rgba(33,150,243,0.6)'"
-                    onblur="this.style.borderColor='rgba(255,255,255,0.1)'"></textarea>
-            </div>
-
-            <!-- معاينة قيمة المستخلص -->
-            <div id="ccf_preview" style="display:none;padding:14px 18px;background:rgba(33,150,243,0.08);border:1px solid rgba(33,150,243,0.25);border-radius:10px;margin-bottom:16px;text-align:center;">
-                <div style="font-size:10px;font-weight:700;color:rgba(33,150,243,0.8);font-family:'Cairo',sans-serif;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">قيمة المستخلص</div>
-                <div style="font-size:26px;font-weight:900;color:#5baddf;font-family:'Cairo',sans-serif;" id="ccf_preview_amount">—</div>
-                <div style="font-size:10px;color:rgba(255,255,255,0.35);font-family:'Cairo',sans-serif;margin-top:4px;">ريال سعودي</div>
-            </div>
-
-            <!-- سجل المستخلصات السابقة للاسترجاع -->
-            <div id="ccf_history_panel" style="display:none;margin-bottom:16px;border:1px solid rgba(33,150,243,0.3);border-radius:10px;overflow:hidden;">
-                <div style="background:rgba(33,150,243,0.12);padding:9px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(33,150,243,0.2);">
-                    <span style="font-size:12px;font-weight:700;color:#5baddf;font-family:'Cairo',sans-serif;">📋 سجل المستخلصات — انقر لتعديل</span>
-                    <button onclick="document.getElementById('ccf_history_panel').style.display='none'" style="background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:13px;">✕</button>
-                </div>
-                <div id="ccf_history_list" style="max-height:200px;overflow-y:auto;"></div>
-            </div>
-
-            <!-- مؤشر وضع التعديل -->
-            <div class="cf-form-mode-badge" style="display:none;padding:8px 14px;background:rgba(245,200,66,0.12);border:1px solid rgba(245,200,66,0.35);border-radius:8px;margin-bottom:12px;display:none;align-items:center;gap:8px;">
-                <span style="font-size:13px;">✏️</span>
-                <span style="font-size:12px;font-weight:700;color:#f5c842;font-family:'Cairo',sans-serif;">وضع التعديل — تعديل مستخلص موجود</span>
-                <button onclick="ccfReset(true)" style="margin-right:auto;background:none;border:1px solid rgba(245,200,66,0.4);color:rgba(245,200,66,0.8);padding:3px 9px;border-radius:6px;font-size:10px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;">إلغاء التعديل</button>
-            </div>
-
-            <!-- Feedback -->
-            <div id="ccf_feedback" style="display:none;padding:12px 16px;border-radius:10px;font-size:13px;font-weight:700;font-family:'Cairo',sans-serif;text-align:center;margin-bottom:8px;"></div>
-
-        </div>
-
-        <!-- Footer -->
-        <div style="background:rgba(0,0,0,0.25);padding:14px 24px;display:flex;align-items:center;justify-content:flex-end;border-top:1px solid rgba(255,255,255,0.05);flex-shrink:0;gap:10px;">
-            <button onclick="ccfSubmit()" id="ccf_submit_btn" style="background:linear-gradient(135deg,#2196f3,#1565c0);border:none;color:white;padding:11px 28px;border-radius:10px;font-size:14px;font-weight:900;font-family:'Cairo',sans-serif;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 16px rgba(33,150,243,0.3);" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">💾 حفظ في السجل</button>
-        </div>
-    </div>
-</div>
-
-<!-- ==================== MODAL: CONTRACTOR CASHFLOW FORM ==================== -->
-<div class="modal" id="contractorCashflowModal" style="z-index:65001;padding:20px;align-items:center;justify-content:center;">
-    <div class="bd-modal-overlay" onclick="closeContractorCashflowForm()" style="position:fixed;inset:0;"></div>
-    <div style="position:relative;z-index:2;display:flex;flex-direction:column;width:min(580px,96vw);max-height:calc(100vh - 40px);background:#0d0d1a;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,0.07);box-shadow:0 32px 80px rgba(0,0,0,0.7);animation:cfSlideIn 0.28s cubic-bezier(0.34,1.2,0.64,1);">
-
-        <!-- Header -->
-        <div style="background:linear-gradient(135deg,#1a0a2e 0%,#4a1a6e 50%,#1a0a2e 100%);padding:18px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
-            <div style="display:flex;align-items:center;gap:14px;">
-                <div style="width:44px;height:44px;background:linear-gradient(135deg,#f5c842,#e8a800);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 16px rgba(245,200,66,0.35);">👷</div>
-                <div>
-                    <div style="font-size:17px;font-weight:900;color:white;font-family:'Cairo',sans-serif;">تسجيل تدفق نقدي — المقاول</div>
-                    <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;font-family:'Cairo',sans-serif;">إضافة مستخلص مقاول جديد</div>
-                </div>
-            </div>
-            <button class="cf-close-btn" onclick="closeContractorCashflowForm()">✕</button>
-        </div>
-
-        <!-- Form Body -->
-        <div style="flex:1;overflow-y:auto;padding:24px;">
-
-            <!-- المقاول -->
-            <div style="margin-bottom:16px;">
-                <label style="display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,0.55);margin-bottom:7px;font-family:'Cairo',sans-serif;">👷 المقاول</label>
-                <select id="concf_contractor_select" class="eq-form-input" style="width:100%;cursor:pointer;appearance:auto;-webkit-appearance:auto;" onchange="concfSyncContractor(this.value)">
-                    <option value="">-- اختر المقاول --</option>
-                </select>
-                <input type="hidden" id="concf_contractor">
-                <input type="hidden" id="concf_contractor_text">
-            </div>
-
-            <!-- رقم المستخلص + التاريخ -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
-                <div id="concf_statement_no_wrap" style="display:none;">
-                    <label style="display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,0.55);margin-bottom:7px;font-family:'Cairo',sans-serif;">📄 رقم المستخلص</label>
-                    <input type="text" id="concf_statement_no" class="eq-form-input" readonly style="cursor:not-allowed;opacity:0.75;background:rgba(255,255,255,0.03);border-color:rgba(245,200,66,0.4);" title="رقم تلقائي — للعرض فقط">
-                </div>
-                <div>
-                    <label style="display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,0.55);margin-bottom:7px;font-family:'Cairo',sans-serif;">📅 تاريخ المستخلص</label>
-                    <input type="date" id="concf_date" class="eq-form-input">
-                </div>
-            </div>
-
-            <!-- المستحق صرفه -->
-            <div style="margin-bottom:16px;">
-                <label style="display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,0.55);margin-bottom:7px;font-family:'Cairo',sans-serif;">📊 المستحق صرفه (ريال)</label>
-                <input type="number" id="concf_total" placeholder="0.00" min="0" step="0.01" class="eq-form-input" oninput="concfUpdatePreview()">
-            </div>
-
-            <!-- المنصرف سابقًا -->
-            <div style="margin-bottom:16px;">
-                <label style="display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,0.55);margin-bottom:7px;font-family:'Cairo',sans-serif;">✅ المنصرف سابقًا (ريال)</label>
-                <input type="number" id="concf_spent" placeholder="0.00" min="0" step="0.01" class="eq-form-input" oninput="concfUpdatePreview()">
-            </div>
-
-            <!-- معاينة المتبقي -->
-            <div id="concf_preview" style="display:none;padding:14px 18px;background:rgba(106,45,145,0.1);border:1px solid rgba(106,45,145,0.3);border-radius:10px;margin-bottom:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;text-align:center;">
-                <div>
-                    <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.4);font-family:'Cairo',sans-serif;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">المستحق صرفه</div>
-                    <div style="font-size:16px;font-weight:900;color:#f5c842;font-family:'Cairo',sans-serif;" id="concf_prev_total">—</div>
-                </div>
-                <div>
-                    <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.4);font-family:'Cairo',sans-serif;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">المنصرف سابقًا</div>
-                    <div style="font-size:16px;font-weight:900;color:#5cc890;font-family:'Cairo',sans-serif;" id="concf_prev_spent">—</div>
-                </div>
-                <div>
-                    <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.4);font-family:'Cairo',sans-serif;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">المتبقي</div>
-                    <div style="font-size:16px;font-weight:900;color:#5baddf;font-family:'Cairo',sans-serif;" id="concf_prev_remaining">—</div>
-                </div>
-            </div>
-
-            <!-- ملاحظات -->
-            <div style="margin-bottom:20px;">
-                <label style="display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,0.55);margin-bottom:7px;font-family:'Cairo',sans-serif;">📝 ملاحظات (اختياري)</label>
-                <textarea id="concf_notes" placeholder="أي ملاحظات إضافية..." rows="3"
-                    style="width:100%;padding:10px 13px;background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.1);border-radius:9px;color:white;font-size:13px;font-family:'Cairo',sans-serif;outline:none;resize:vertical;text-align:right;direction:rtl;transition:border-color 0.2s;"
-                    onfocus="this.style.borderColor='rgba(245,200,66,0.6)'"
-                    onblur="this.style.borderColor='rgba(255,255,255,0.1)'"></textarea>
-            </div>
-
-            <!-- سجل مستخلصات المقاول السابقة -->
-            <div id="concf_history_panel" style="display:none;margin-bottom:16px;border:1px solid rgba(245,200,66,0.3);border-radius:10px;overflow:hidden;">
-                <div style="background:rgba(245,200,66,0.1);padding:9px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(245,200,66,0.2);">
-                    <span style="font-size:12px;font-weight:700;color:#f5c842;font-family:'Cairo',sans-serif;">📋 مستخلصات المقاول — انقر لتعديل</span>
-                    <button onclick="document.getElementById('concf_history_panel').style.display='none'" style="background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:13px;">✕</button>
-                </div>
-                <div id="concf_history_list" style="max-height:200px;overflow-y:auto;"></div>
-            </div>
-
-            <!-- مؤشر وضع التعديل -->
-            <div id="concf_edit_badge" style="display:none;padding:8px 14px;background:rgba(245,200,66,0.1);border:1px solid rgba(245,200,66,0.35);border-radius:8px;margin-bottom:12px;align-items:center;gap:8px;">
-                <span style="font-size:13px;">✏️</span>
-                <span style="font-size:12px;font-weight:700;color:#f5c842;font-family:'Cairo',sans-serif;">وضع التعديل — تعديل مستخلص موجود</span>
-                <button onclick="concfReset(true)" style="margin-right:auto;background:none;border:1px solid rgba(245,200,66,0.4);color:rgba(245,200,66,0.8);padding:3px 9px;border-radius:6px;font-size:10px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;">إلغاء التعديل</button>
-            </div>
-
-            <!-- Feedback -->
-            <div id="concf_feedback" style="display:none;padding:12px 16px;border-radius:10px;font-size:13px;font-weight:700;font-family:'Cairo',sans-serif;text-align:center;margin-bottom:8px;"></div>
-
-        </div>
-
-        <!-- Footer -->
-        <div style="background:rgba(0,0,0,0.25);padding:14px 24px;display:flex;align-items:center;justify-content:flex-end;border-top:1px solid rgba(255,255,255,0.05);flex-shrink:0;">
-            <button onclick="concfSubmit()" id="concf_submit_btn" style="background:linear-gradient(135deg,#f5c842,#e8a800);border:none;color:#1a0a2e;padding:11px 28px;border-radius:10px;font-size:14px;font-weight:900;font-family:'Cairo',sans-serif;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 16px rgba(245,200,66,0.3);" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">💾 حفظ في السجل</button>
-        </div>
-    </div>
-</div>
-
-
-    <script src="main.js"></script>
-    <script src="viewcashflow.js"></script>
-    <script src="viewequipment.js"></script>
-    <script src="addcashflow.js"></script>
-    <script src="equipment.js"></script>
-    <script src="equipment_camera_patch.js"></script>
-    <script src="equipment_autofill_patch.js"></script> 
-</body>
-</html>
+/* ====================================================
+   EQUIPMENT FORM — تسجيل المعدات في Google Sheet
+   Apps Script endpoint: receives element_id, element_name,
+   item_name, contractor, date, equipments[]
+   ==================================================== */
+
+
+// Known equipment types for autocomplete
+/* ── قائمة أنواع المعدات — تُحمَّل حصراً من categories.json (لا قيم افتراضية) ── */
+let equipmentTypes = [];
+/* alias للتوافق مع الكود القديم */
+const EQ_KNOWN_TYPES = new Proxy([], {
+    get(_, key) { return equipmentTypes[key]; }
+});
+
+let eqFormEquipmentCount = 0;
+
+/* ── Open / Close ── */
+function openEquipmentFormModal() {
+    document.getElementById('equipmentFormModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+    eqPopulateSubitems();
+    eqPopulateContractors();
+    eqBuildElementsList();
+    // Set today's date
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('eqf_date').value = today;
+    // Add first row if empty
+    if (eqFormEquipmentCount === 0) eqAddEquipmentRow();
+}
+
+function closeEquipmentFormModal() {
+    document.getElementById('equipmentFormModal').classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+/* ── Populate subitems — now handled by band picker modal, kept for compatibility ── */
+function eqPopulateSubitems() {
+    // البنود تُعرض الآن في eqBandPickerModal — لا حاجة لملء select
+}
+
+/* ── Populate contractors select from loaded data ── */
+function eqPopulateContractors() {
+    const sel = document.getElementById('eqf_contractor');
+    const currentVal = sel.value;
+    sel.innerHTML = '<option value="">-- اختر المقاول --</option>';
+    const contractors = new Set();
+    // من allData المحملة
+    Object.values(allData || {}).forEach(sheetData => {
+        Object.values(sheetData).forEach(row => {
+            const c = (row['CONTRACTOR'] || '').trim();
+            if (c) contractors.add(c);
+        });
+    });
+    // من contractorMap
+    Object.keys(contractorMap || {}).forEach(name => {
+        if (name.trim()) contractors.add(name.trim());
+    });
+    const sorted = [...contractors].sort((a, b) => a.localeCompare(b, 'ar'));
+    sorted.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+    });
+    if (currentVal) sel.value = currentVal;
+}
+
+/* ── Element search dropdown ── */
+let _eqAllElements = []; // { id, name, sheetId, subName }
+
+function eqBuildElementsList() {
+    _eqAllElements = [];
+    categories.forEach(cat => {
+        cat.subitems.forEach(sub => {
+            if (!allData[sub.sheetId]) return;
+            Object.values(allData[sub.sheetId]).forEach(row => {
+                const nameKey = row['ROAD NAME'] ? 'ROAD NAME' : row['BLOCK NAME'] ? 'BLOCK NAME' : 'NAME';
+                const name = (row[nameKey] || '').trim();
+                const id   = (row['ID'] || '').trim();
+                if (name && id) {
+                    _eqAllElements.push({ id, name, sheetId: sub.sheetId, subName: sub.name });
+                }
+            });
+        });
+    });
+}
+
+function eqShowElementDropdown() {
+    eqBuildElementsList();
+    eqFilterElementDropdown();
+}
+
+function eqFilterElementDropdown() {
+    const inp = document.getElementById('eqf_element_search');
+    const dd  = document.getElementById('eqf_element_dropdown');
+    const q   = (inp.value || '').trim().toLowerCase();
+
+    const filtered = q
+        ? _eqAllElements.filter(e => e.name.toLowerCase().includes(q) || e.id.toLowerCase().includes(q))
+        : _eqAllElements;
+
+    if (!filtered.length) {
+        dd.innerHTML = '<div style="padding:12px 14px;text-align:center;color:rgba(255,255,255,0.3);font-size:12px;font-family:\'Cairo\',sans-serif;">لا توجد عناصر مطابقة</div>';
+    } else {
+        dd.innerHTML = filtered.slice(0, 60).map(e =>
+            '<div onclick="eqSelectElement(\'' + e.id.replace(/'/g,"\\'") + '\',\'' + e.name.replace(/'/g,"\\'") + '\')" ' +
+            'style="padding:9px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);transition:background 0.15s;display:flex;flex-direction:column;gap:2px;" ' +
+            'onmouseover="this.style.background=\'rgba(39,174,106,0.12)\'" onmouseout="this.style.background=\'\'">'+
+            '<span style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.9);font-family:\'Cairo\',sans-serif;">' + e.name + '</span>' +
+            '<span style="font-size:10px;color:rgba(255,255,255,0.4);font-family:\'Cairo\',sans-serif;">ID: ' + e.id + ' • ' + e.subName + '</span>' +
+            '</div>'
+        ).join('');
+    }
+    dd.style.display = 'block';
+
+    // Close on outside click
+    setTimeout(() => {
+        document.addEventListener('click', eqCloseElementDropdownOutside, { once: true, capture: true });
+    }, 0);
+}
+
+function eqCloseElementDropdownOutside(e) {
+    const dd  = document.getElementById('eqf_element_dropdown');
+    const inp = document.getElementById('eqf_element_search');
+    if (!dd || !inp) return;
+    if (!dd.contains(e.target) && e.target !== inp) {
+        dd.style.display = 'none';
+    } else {
+        // Re-attach if click was inside dropdown or input
+        document.addEventListener('click', eqCloseElementDropdownOutside, { once: true, capture: true });
+    }
+}
+
+function eqSelectElement(id, name) {
+    document.getElementById('eqf_element_id').value   = id;
+    document.getElementById('eqf_element_name').value = name;
+    document.getElementById('eqf_element_search').value = name;
+    document.getElementById('eqf_element_dropdown').style.display = 'none';
+    // Show info bar
+    const info = document.getElementById('eqf_element_info');
+    document.getElementById('eqf_element_info_name').textContent = name;
+    document.getElementById('eqf_element_info_id').textContent   = 'ID: ' + id;
+    info.style.display = 'flex';
+
+    // ── ملء البند الفرعي تلقائياً من العنصر المختار ──
+    const el = _eqAllElements.find(e => e.id === id && e.name === name)
+            || _eqAllElements.find(e => e.id === id);
+    if (el) {
+        // ابحث عن البند الفرعي الكامل في categories
+        let matchedSub = null, matchedCat = null;
+        (categories || []).forEach(cat => {
+            cat.subitems.forEach(sub => {
+                if (sub.sheetId === el.sheetId) {
+                    matchedSub = sub;
+                    matchedCat = cat;
+                }
+            });
+        });
+
+        if (matchedSub && matchedCat) {
+            // ملء بيانات البند
+            document.getElementById('eqf_item_name').value  = matchedSub.name;
+            document.getElementById('eqf_band_sheet').value = matchedSub.sheetId || '';
+            document.getElementById('eqf_cat_name').value   = matchedCat.name || '';
+            document.getElementById('eqf_cat_id').value     = matchedCat.id   || '';
+
+            // تحديث الـ label في الزر
+            const lbl = document.getElementById('eqf_band_display');
+            if (lbl) {
+                lbl.value = matchedSub.name;
+                lbl.style.opacity = '1';
+            }
+            // band display is now a readonly input — no button to manipulate
+
+            // المجموعة
+            const group = getGroupForSub(matchedSub.id);
+            document.getElementById('eqf_group_name').value = group ? (group.name || '—') : '—';
+            document.getElementById('eqf_group_id').value   = group ? (group.id   || '')  : '';
+        }
+    }
+}
+
+function eqClearElement() {
+    document.getElementById('eqf_element_id').value   = '';
+    document.getElementById('eqf_element_name').value = '';
+    document.getElementById('eqf_element_search').value = '';
+    document.getElementById('eqf_element_info').style.display = 'none';
+
+    // ── إعادة تفعيل زر البند ──
+    // band display is now a readonly input — no button to manipulate
+    // مسح بيانات البند
+    document.getElementById('eqf_item_name').value   = '';
+    document.getElementById('eqf_band_sheet').value  = '';
+    document.getElementById('eqf_cat_name').value    = '';
+    document.getElementById('eqf_cat_id').value      = '';
+    document.getElementById('eqf_group_name').value  = '';
+    document.getElementById('eqf_group_id').value    = '';
+    const lbl = document.getElementById('eqf_band_display');
+    if (lbl) { lbl.value = ''; lbl.style.opacity = ''; }
+}
+
+/* ── Pick from map ── */
+let _eqPickingFromMap = false;
+let _eqMapClickHandler = null;
+
+function eqPickFromMap() {
+    if (!map) { showAlert('❌ الخريطة غير جاهزة'); return; }
+
+    // تحقق إن فيه طبقات محملة
+    const hasLayers = Object.keys(allLayers).length > 0;
+    if (!hasLayers) {
+        showAlert('❌ حمّل بنداً على الخريطة أولاً');
+        return;
+    }
+
+    _eqPickingFromMap = true;
+
+    // ── إخفاء المودال بالكامل ──
+    document.getElementById('equipmentFormModal').style.display = 'none';
+
+    // ── شريط تلميح فوق الخريطة ──
+    let hint = document.getElementById('eqPickMapHint');
+    if (!hint) {
+        hint = document.createElement('div');
+        hint.id = 'eqPickMapHint';
+        hint.style.cssText = [
+            'position:fixed','top:70px','left:50%','transform:translateX(-50%)',
+            'z-index:99999','background:linear-gradient(135deg,#1a4a8a,#2196f3)',
+            'color:white','padding:12px 24px','border-radius:12px',
+            'font-size:13px','font-weight:700','font-family:\'Cairo\',sans-serif',
+            'box-shadow:0 8px 28px rgba(33,150,243,0.5)',
+            'display:flex','align-items:center','gap:14px','white-space:nowrap',
+            'pointer-events:auto'
+        ].join(';');
+        hint.innerHTML =
+            '<span>🗺 انقر على أي عنصر في الخريطة لاختياره</span>' +
+            '<button onclick="eqCancelPickFromMap()" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;padding:4px 12px;border-radius:7px;font-size:12px;font-weight:700;font-family:\'Cairo\',sans-serif;cursor:pointer;">إلغاء</button>';
+        document.body.appendChild(hint);
+    }
+    hint.style.display = 'flex';
+
+    // ── إضافة cursor crosshair على الخريطة ──
+    map.getContainer().style.cursor = 'crosshair';
+
+    // ── ربط click مباشرة على كل feature في كل طبقة ──
+    _eqMapClickHandler = function(e) {
+        if (!_eqPickingFromMap) return;
+
+        // منع الـ popup من الفتح
+        if (e.originalEvent) {
+            e.originalEvent.stopPropagation();
+            e.originalEvent.preventDefault();
+        }
+        if (map.closePopup) map.closePopup();
+
+        const row = _eqGetRowFromFeatureEvent(e);
+        eqCancelPickFromMap();
+
+        if (row) {
+            const nameKey = row['ROAD NAME'] ? 'ROAD NAME' : row['BLOCK NAME'] ? 'BLOCK NAME' : 'NAME';
+            const name = (row[nameKey] || '').trim() || row['ID'];
+            const id   = row['ID'] || '';
+            eqSelectElement(id, name);
+            showAlert('✅ تم اختيار: ' + name, 'success');
+        }
+    };
+
+    // ── handler للنقر على المساحة الفارغة من الخريطة ──
+    _eqMapBgClickHandler = function(e) {
+        if (!_eqPickingFromMap) return;
+        // ابحث عن أقرب feature للنقطة المنقورة
+        let nearest = null, nearestDist = Infinity;
+        Object.entries(allLayers).forEach(([sheetId, layer]) => {
+            if (!layer || !allData[sheetId]) return;
+            layer.eachLayer(f => {
+                try {
+                    const center = f.getBounds ? f.getBounds().getCenter()
+                                 : f.getLatLng ? f.getLatLng() : null;
+                    if (!center) return;
+                    const d = map.distance(e.latlng, center);
+                    if (d < nearestDist) {
+                        nearestDist = d;
+                        const row = allData[sheetId][f.feature.properties.ID];
+                        if (row) nearest = row;
+                    }
+                } catch(err) {}
+            });
+        });
+
+        if (nearest && nearestDist < 500) {
+            // اختار الأقرب إن كان ضمن 500 متر
+            _eqPickingFromMap = false; // منع التكرار
+            map.closePopup();
+            const nameKey = nearest['ROAD NAME'] ? 'ROAD NAME' : nearest['BLOCK NAME'] ? 'BLOCK NAME' : 'NAME';
+            const name = (nearest[nameKey] || '').trim() || nearest['ID'];
+            eqCancelPickFromMap();
+            eqSelectElement(nearest['ID'] || '', name);
+            showAlert('✅ تم اختيار: ' + name, 'success');
+        }
+    };
+
+    // أضف الـ handler على كل feature
+    Object.values(allLayers).forEach(layer => {
+        if (!layer) return;
+        layer.eachLayer(f => {
+            f.on('click', _eqMapClickHandler);
+        });
+    });
+
+    // وعلى الـ map كـ fallback
+    map.on('click', _eqMapBgClickHandler);
+}
+
+function _eqGetRowFromFeatureEvent(e) {
+    const f = e.target || e.layer;
+    if (!f || !f.feature) return null;
+    const fid = f.feature.properties.ID;
+    for (const [sheetId, data] of Object.entries(allData)) {
+        if (data[fid]) return data[fid];
+    }
+    return null;
+}
+
+let _eqMapBgClickHandler = null;
+
+function eqCancelPickFromMap() {
+    _eqPickingFromMap = false;
+
+    // ── إعادة إظهار المودال ──
+    document.getElementById('equipmentFormModal').style.display = '';
+
+    // ── إخفاء الشريط ──
+    const hint = document.getElementById('eqPickMapHint');
+    if (hint) hint.style.display = 'none';
+
+    // ── إزالة cursor crosshair ──
+    if (map) map.getContainer().style.cursor = '';
+
+    // ── إزالة handlers من كل feature ──
+    if (_eqMapClickHandler) {
+        Object.values(allLayers).forEach(layer => {
+            if (!layer) return;
+            layer.eachLayer(f => {
+                f.off('click', _eqMapClickHandler);
+            });
+        });
+        _eqMapClickHandler = null;
+    }
+
+    // ── إزالة map background handler ──
+    if (map && _eqMapBgClickHandler) {
+        map.off('click', _eqMapBgClickHandler);
+        _eqMapBgClickHandler = null;
+    }
+
+    // ── إغلاق أي popup مفتوح ──
+    if (map) map.closePopup();
+}
+
+/* ── Band Picker Sub-Modal ── */
+function eqOpenBandPicker() {
+    const modal = document.getElementById('eqBandPickerModal');
+    modal.style.display = 'flex';
+    document.getElementById('eqBandPickerSearch').value = '';
+    eqRenderBandPicker('');
+    setTimeout(() => document.getElementById('eqBandPickerSearch').focus(), 100);
+}
+
+function eqCloseBandPicker() {
+    document.getElementById('eqBandPickerModal').style.display = 'none';
+}
+
+function eqFilterBandPicker() {
+    const q = document.getElementById('eqBandPickerSearch').value.trim().toLowerCase();
+    eqRenderBandPicker(q);
+}
+
+function eqRenderBandPicker(q) {
+    const list = document.getElementById('eqBandPickerList');
+    let html = '';
+
+    (categories || []).forEach(cat => {
+        const subs = (cat.subitems || []).filter(sub => {
+            if (!q) return true;
+            return sub.name.toLowerCase().includes(q) ||
+                   (sub.number || '').toLowerCase().includes(q);
+        });
+        if (!subs.length) return;
+
+        html += '<div style="margin-bottom:8px;">' +
+            '<div style="font-size:10px;font-weight:900;color:rgba(106,45,145,0.9);padding:6px 8px 4px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid rgba(106,45,145,0.2);margin-bottom:4px;font-family:\'Cairo\',sans-serif;">' +
+            cat.emoji + ' ' + cat.name +
+            '</div>';
+
+        subs.forEach(sub => {
+            const numBadge = sub.number
+                ? '<span style="font-size:9px;font-weight:700;color:rgba(106,45,145,0.8);background:rgba(106,45,145,0.12);padding:2px 7px;border-radius:4px;border:1px solid rgba(106,45,145,0.2);margin-left:6px;flex-shrink:0;">' + sub.number + '</span>'
+                : '';
+            const safeCatName = cat.name.replace(/'/g, "\\'");
+            const safeCatId   = (cat.id || '').replace(/'/g, "\\'");
+            html += '<div onclick="eqSelectBand(\'' + sub.name.replace(/'/g, "\\'") + '\',\'' + (sub.sheetId || '') + '\',\'' + safeCatName + '\',\'' + safeCatId + '\')" ' +
+                'style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:9px;cursor:pointer;border:1.5px solid transparent;transition:all 0.15s;margin-bottom:3px;background:rgba(255,255,255,0.03);" ' +
+                'onmouseover="this.style.background=\'rgba(106,45,145,0.12)\';this.style.borderColor=\'rgba(106,45,145,0.35)\'" ' +
+                'onmouseout="this.style.background=\'rgba(255,255,255,0.03)\';this.style.borderColor=\'transparent\'">' +
+                '<span style="font-size:16px;flex-shrink:0;">📌</span>' +
+                '<span style="flex:1;font-size:13px;font-weight:700;color:rgba(255,255,255,0.9);font-family:\'Cairo\',sans-serif;text-align:right;">' + sub.name + '</span>' +
+                numBadge +
+                '</div>';
+        });
+
+        html += '</div>';
+    });
+
+    if (!html) {
+        html = '<div style="text-align:center;padding:40px 20px;color:rgba(255,255,255,0.3);font-size:13px;font-family:\'Cairo\',sans-serif;">لا توجد بنود مطابقة</div>';
+    }
+
+    list.innerHTML = html;
+}
+
+function eqSelectBand(name, sheetId, catName, catId) {
+    document.getElementById('eqf_item_name').value  = name;
+    document.getElementById('eqf_band_sheet').value = sheetId || '';
+    const lbl = document.getElementById('eqf_band_display');
+    lbl.value = name;
+    lbl.style.opacity = '1';
+    // band is now readonly input
+
+    // ── البند الرئيسي ──
+    document.getElementById('eqf_cat_name').value = catName || '';
+    document.getElementById('eqf_cat_id').value   = catId   || '';
+
+    // ── المجموعة (من similarGroups) ──
+    const sub = (categories || []).flatMap(c => c.subitems)
+        .find(s => s.sheetId === sheetId && s.name === name);
+    const group = sub ? getGroupForSub(sub.id) : null;
+    document.getElementById('eqf_group_name').value = group ? (group.name || '—') : '—';
+    document.getElementById('eqf_group_id').value   = group ? (group.id   || '')  : '';
+
+    eqCloseBandPicker();
+}
+
+/* ── Get all equipment types currently selected in existing rows ── */
+function eqGetUsedTypes() {
+    var used = new Set();
+    document.querySelectorAll('#eqf_equipments_container .eq-type-inp').forEach(function(sel) {
+        if (sel.value) used.add(sel.value);
+    });
+    return used;
+}
+
+/* ── Refresh all existing selects: hide used options (except own value) ── */
+function eqRefreshAllSelects() {
+    var used = eqGetUsedTypes();
+    document.querySelectorAll('#eqf_equipments_container .eq-type-inp').forEach(function(sel) {
+        var ownVal = sel.value;
+        Array.from(sel.options).forEach(function(opt) {
+            if (!opt.value) return; // placeholder — keep always
+            opt.hidden = (used.has(opt.value) && opt.value !== ownVal);
+        });
+    });
+}
+
+/* ── Add an equipment row ── */
+function eqAddEquipmentRow() {
+    var container = document.getElementById('eqf_equipments_container');
+    var hint = container.querySelector('.eq-empty-hint');
+    if (hint) hint.remove();
+
+    // تحقق إن القائمة فيها أنواع
+    if (!equipmentTypes.length) {
+        showAlert('❌ لا توجد أنواع معدات في النظام — أضفها من الإعدادات ⚙️ ← أنواع المعدات');
+        return;
+    }
+
+    // تحقق إن في أنواع متاحة لم تُختر بعد
+    var used = eqGetUsedTypes();
+    var available = equipmentTypes.filter(function(t) { return !used.has(t); });
+    if (!available.length) {
+        showAlert('⚠️ تم اختيار جميع أنواع المعدات المتاحة');
+        return;
+    }
+
+    eqFormEquipmentCount++;
+    var rowId = 'eqrow_' + eqFormEquipmentCount;
+
+    // Build select options — تخفي الأنواع المستخدمة مسبقاً
+    var optionsHtml = '<option value="" disabled selected>-- اختر نوع المعدة --</option>' +
+        equipmentTypes.map(function(t) {
+            var isUsed = used.has(t);
+            return '<option value="' + t + '"' + (isUsed ? ' hidden' : '') + '>' + t + '</option>';
+        }).join('');
+
+    var row = document.createElement('div');
+    row.className = 'eq-item-row';
+    row.id = rowId;
+    row.innerHTML =
+        '<select class="eq-type-inp" id="' + rowId + '_type">' +
+        optionsHtml + '</select>' +
+        '<input type="number" placeholder="العدد" min="0" id="' + rowId + '_count" style="text-align:center;">' +
+        '<button class="eq-del-row-btn" onclick="eqRemoveEquipmentRow(\'' + rowId + '\')" title="حذف">✕</button>';
+
+    container.appendChild(row);
+
+    // لما يغير الاختيار: حدّث كل الـ selects
+    var sel = row.querySelector('.eq-type-inp');
+    if (sel) {
+        sel.addEventListener('change', function() {
+            eqRefreshAllSelects();
+        });
+        sel.focus();
+    }
+}
+/* ── Remove an equipment row ── */
+function eqRemoveEquipmentRow(rowId) {
+    const row = document.getElementById(rowId);
+    if (row) row.remove();
+    eqShowEmptyHint();
+    // أعد إظهار المعدة المحذوفة في بقية الصفوف
+    eqRefreshAllSelects();
+}
+
+/* ── Show hint if no rows ── */
+function eqShowEmptyHint() {
+    const container = document.getElementById('eqf_equipments_container');
+    if (!container.querySelector('.eq-item-row')) {
+        if (!container.querySelector('.eq-empty-hint')) {
+            container.innerHTML = '<div class="eq-empty-hint">اضغط "إضافة معدة" لإضافة نوع معدة</div>';
+        }
+        eqFormEquipmentCount = 0;
+    }
+}
+
+/* ── Reset the form ── */
+function eqResetForm() {
+    document.getElementById('eqf_element_id').value     = '';
+    document.getElementById('eqf_element_name').value   = '';
+    document.getElementById('eqf_element_search').value = '';
+    document.getElementById('eqf_element_info').style.display = 'none';
+    document.getElementById('eqf_element_dropdown').style.display = 'none';
+    document.getElementById('eqf_item_name').value   = '';
+    document.getElementById('eqf_band_sheet').value  = '';
+    document.getElementById('eqf_cat_name').value    = '';
+    document.getElementById('eqf_cat_id').value      = '';
+    document.getElementById('eqf_group_name').value  = '';
+    document.getElementById('eqf_group_id').value    = '';
+    const lbl = document.getElementById('eqf_band_display');
+    if (lbl) { lbl.value = ''; lbl.style.opacity = ''; }
+    document.getElementById('eqf_contractor').value   = '';
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('eqf_date').value = today;
+    const doneQty = document.getElementById('eqf_done_qty');
+   const rowIdx = document.getElementById('eqf_row_index');
+   if (rowIdx) rowIdx.value = '';
+   window._afFoundRowIndex = null;
+    if (doneQty) doneQty.value = '';
+    document.getElementById('eqf_equipments_container').innerHTML = '';
+    eqFormEquipmentCount = 0;
+    eqShowEmptyHint();
+    eqHideFeedback();
+    eqCancelPickFromMap();
+}
+
+/* ── Show / hide feedback ── */
+function eqShowFeedback(msg, type) {
+    const fb = document.getElementById('eqf_feedback');
+    fb.className = 'eqf-' + type;
+    fb.textContent = msg;
+    fb.style.display = 'block';
+    if (type === 'success') {
+        setTimeout(() => eqHideFeedback(), 4000);
+    }
+}
+
+function eqHideFeedback() {
+    const fb = document.getElementById('eqf_feedback');
+    fb.style.display = 'none';
+    fb.className = '';
+}
+
+/* ── Collect equipment rows ── */
+function eqCollectEquipments() {
+    const rows = document.querySelectorAll('#eqf_equipments_container .eq-item-row');
+    const result = [];
+    let hasEmptyCount = false;
+
+    rows.forEach(row => {
+        const typeInp  = row.querySelector('.eq-type-inp');
+        const countInp = row.querySelector('input[type="number"]');
+        const t = (typeInp ? typeInp.value.trim() : '');
+        const rawVal = countInp ? countInp.value.trim() : '';
+        const c = parseInt(rawVal) || 0;
+
+        if (t) {
+            if (rawVal === '' || c <= 0) {
+                hasEmptyCount = true;
+                // تمييز الخانة الفارغة باللون الأحمر
+                if (countInp) {
+                    countInp.style.borderColor = '#e53935';
+                    countInp.style.boxShadow   = '0 0 0 2px rgba(229,57,53,0.3)';
+                    countInp.focus();
+                }
+            } else {
+                if (countInp) {
+                    countInp.style.borderColor = '';
+                    countInp.style.boxShadow   = '';
+                }
+                result.push({ type: t, count: c });
+            }
+        }
+    });
+
+    if (hasEmptyCount) {
+        result._hasError = true; // علامة للـ submit
+    }
+    return result;
+}
+
+/* ── Submit the form ── */
+async function eqSubmitForm() {
+    eqHideFeedback();
+
+    const element_id   = document.getElementById('eqf_element_id').value.trim();
+    const element_name = document.getElementById('eqf_element_name').value.trim();
+    const item_name    = document.getElementById('eqf_item_name').value.trim();
+    const cat_name     = document.getElementById('eqf_cat_name').value.trim();
+    const group_name   = document.getElementById('eqf_group_name').value.trim();
+    const contractor   = document.getElementById('eqf_contractor').value.trim();
+    const date         = document.getElementById('eqf_date').value.trim();
+    const done_qty     = parseFloat(document.getElementById('eqf_done_qty').value) || 0;
+    const band_sheet   = document.getElementById('eqf_band_sheet').value.trim();
+
+    // Validation
+    if (!element_name) { eqShowFeedback('❌ يرجى اختيار أو إدخال اسم العنصر', 'error'); return; }
+    if (!item_name)    { eqShowFeedback('❌ يرجى اختيار البند', 'error'); return; }
+    if (!contractor)   { eqShowFeedback('❌ يرجى اختيار المقاول', 'error'); return; }
+    if (!date)         { eqShowFeedback('❌ يرجى اختيار التاريخ', 'error'); return; }
+    if (!band_sheet)   { eqShowFeedback('❌ البند المختار ليس له شيت مرتبط — راجع الإعدادات', 'error'); return; }
+
+    const equipments = eqCollectEquipments();
+    if (equipments._hasError) {
+        eqShowFeedback('❌ يرجى إدخال عدد صحيح (أكبر من صفر) لجميع المعدات', 'error');
+        return;
+    }
+    if (!equipments.length) {
+        eqShowFeedback('❌ يرجى إضافة معدة واحدة على الأقل', 'error');
+        return;
+    }
+
+    // Disable submit button
+    const btn = document.getElementById('eqf_submit_btn');
+    btn.disabled = true;
+    btn.textContent = '⏳ جاري الحفظ...';
+    eqShowFeedback('⏳ جاري إرسال البيانات...', 'loading');
+
+    // ── جيب scriptUrl من البند الفرعي في categories ──
+    let scriptUrl = '';
+    try {
+        const allSubs = (categories || []).flatMap(c => c.subitems || []);
+        const matchedSub = allSubs.find(s => s.sheetId === band_sheet);
+
+        if (matchedSub && matchedSub.scriptUrl) {
+            scriptUrl = matchedSub.scriptUrl.trim();
+        }
+
+        if (!scriptUrl) {
+            throw new Error(
+                'لم يتم العثور على رابط السكريبت — تأكد من:\n' +
+                '1. فتح الإعدادات ⚙️ ← دبل كليك على البند الفرعي في السايدبار\n' +
+                '2. إدخال رابط Apps Script في حقل "رابط سكريبت تسجيل الكمية - المعدات"\n' +
+                '3. تصدير categories.json ⬇ وإعادة رفعه'
+            );
+        }
+    } catch (fetchErr) {
+        eqShowFeedback('❌ ' + fetchErr.message, 'error');
+        btn.disabled    = false;
+        btn.textContent = '💾 حفظ في السجل';
+        return;
+    }
+    const row_index = parseInt(document.getElementById('eqf_row_index')?.value) || null;
+    const added_by = (currentUser && currentUser.email) ? currentUser.email : (currentUser && currentUser.name ? currentUser.name : '');
+
+    // لو في تحديث لصف موجود ومافيش صورة جديدة، ابعت الـ URL القديمة من autofill
+    // السكريبت عنده حماية ثانية برضو لكن ده أسرع
+    const _existingPhotoEl = document.getElementById('eqf_existing_photo_url');
+    const _newPhotoEl      = document.getElementById('eqf_photo_url');
+    const photo_url = (_newPhotoEl && _newPhotoEl.value.trim())
+        ? _newPhotoEl.value.trim()
+        : (_existingPhotoEl && _existingPhotoEl.value.trim() ? _existingPhotoEl.value.trim() : '');
+
+    const payload = { 
+    form_type: 'daily', 
+    row_index,
+    group_name, cat_name, element_id, element_name, 
+    item_name, contractor, date, done_qty, equipments,
+    added_by,   // email أو اسم المستخدم الذي أضاف السجل
+    photo_url   // الصورة الجديدة أو القديمة المحفوظة
+};
+    try {
+        const r = await fetch(scriptUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify(payload),
+            redirect: 'follow'
+        });
+
+        const text = await r.text();
+        let resp = {};
+        try { resp = JSON.parse(text); } catch(e) {}
+
+        if (resp.status === 'success' || r.ok) {
+            eqShowFeedback('✅ تم حفظ بيانات المعدات بنجاح في السجل!', 'success');
+            showAlert('✅ تم تسجيل الكمية - المعدات بنجاح', 'success');
+            setTimeout(() => eqResetForm(), 2500);
+        } else {
+            throw new Error(resp.message || 'فشل الحفظ');
+        }
+
+    } catch(e) {
+        console.error('Equipment form submit error:', e);
+        eqShowFeedback('❌ تعذر الحفظ: ' + (e.message || 'خطأ في الاتصال') + ' — تأكد من إعدادات Apps Script', 'error');
+    } finally {
+        btn.disabled    = false;
+        btn.textContent = '💾 حفظ في السجل';
+    }
+}
+
+/* ── Override openEquipmentModal to also load from the new sheet ── */
+const _origOpenEquipmentModal = openEquipmentModal;
+window.openEquipmentModal = function() {
+    _eqActiveTab = 'overview';
+    openModal('equipmentModal');
+    // If new sheet data is available, merge it in before loading
+    eqMergeNewSheetDataThenLoad();
+};
+
+/* ── Sheet ID for the new equipment registration sheet ── */
+const EQ_REG_SHEET_ID = "1kPeMj-XDSmIu5nrNmRK6kmlK268LOzRxOm4WUWSkBwU";
+
+/* ── Fetch data from the new registration sheet and merge into equipmentRawRows ── */
+let _eqRegCache = null;
+let _eqRegLastFetch = 0;
+
+async function eqFetchRegistrationSheet() {
+    const now = Date.now();
+    // Cache for 2 minutes
+    if (_eqRegCache && (now - _eqRegLastFetch) < 120000) return _eqRegCache;
+
+    try {
+        const url = `https://docs.google.com/spreadsheets/d/${EQ_REG_SHEET_ID}/export?format=csv&gid=0`;
+        const r   = await fetch(url);
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const csv = await r.text();
+        if (csv.trim().startsWith('<')) throw new Error('not public');
+
+        const lines = csv.split('\n').filter(l => l.trim());
+        if (lines.length < 2) return [];
+
+        /*
+         * الشيت الجديد له أعمدة بالترتيب:
+         *  element_id | element_name | item_name | contractor | date | type1 | count1 | type2 | count2 | ...
+         *
+         * نحوّله لصفوف بصيغة {ID, البند, CONTRACTOR, [معدة]: عدد, ...}
+         * حتى يتوافق مع نظام equipmentRawRows الحالي
+         */
+        const rows = [];
+        const baseHeaders = ['ID', 'ELEMENT_NAME', 'البند', 'CONTRACTOR', 'DATE'];
+
+        for (let i = 1; i < lines.length; i++) {
+            const vals = lines[i].split(',').map(v => v.trim());
+            if (!vals[0]) continue;
+
+            const row = {
+                'ID':           vals[0] || '',
+                'ELEMENT_NAME': vals[1] || '',
+                'البند':        vals[2] || '',
+                'CONTRACTOR':   vals[3] || '',
+                'DATE':         vals[4] || '',
+            };
+
+            // Equipment pairs: type, count starting at index 5
+            for (let j = 5; j < vals.length - 1; j += 2) {
+                const typeName = (vals[j] || '').trim();
+                const count    = parseInt(vals[j+1] || '0') || 0;
+                if (typeName) {
+                    row[typeName.toUpperCase()] = String(count);
+                }
+            }
+            rows.push(row);
+        }
+
+        _eqRegCache    = rows;
+        _eqRegLastFetch = now;
+        return rows;
+
+    } catch(e) {
+        console.warn('eqFetchRegistrationSheet failed:', e.message);
+        return [];
+    }
+}
+
+/* ── Build a unified view combining original + registration sheet data ── */
+async function eqMergeNewSheetDataThenLoad() {
+    const loadMsg = document.getElementById('eqLoadMsg');
+    if (loadMsg) { loadMsg.style.display = 'block'; loadMsg.textContent = '⏳ جاري تحميل بيانات المعدات المسجلة...'; }
+
+    const regRows = await eqFetchRegistrationSheet();
+
+    if (regRows.length > 0) {
+        // We need to rebuild combined headers for the dashboard
+        // Gather all unique equipment type keys from both sources
+        const allEqKeys = new Set();
+
+        // From original equipment sheet
+        (equipmentRawHeaders || []).forEach(h => {
+            const u = h.trim().toUpperCase();
+            if (!['ID','BAYAN','البيان','DESCRIPTION','بيان','البند','BAND','ALBND','ITEM','ELEMENT_NAME','CONTRACTOR','DATE'].includes(u) && h.trim()) {
+                allEqKeys.add(h.trim());
+            }
+        });
+
+        // From registration sheet rows
+        regRows.forEach(row => {
+            Object.keys(row).forEach(k => {
+                if (!['ID','ELEMENT_NAME','البند','CONTRACTOR','DATE'].includes(k.toUpperCase()) && !['ID','ELEMENT_NAME','البند','CONTRACTOR','DATE'].includes(k)) {
+                    allEqKeys.add(k);
+                }
+            });
+        });
+
+        // Build combined headers if we have reg data
+        if (!window._eqCombinedInited) {
+            window._eqCombinedInited = true;
+        }
+
+        // Store reg rows globally so dashboard can use them
+        window.eqRegRows = regRows;
+        window.eqAllEqKeys = [...allEqKeys];
+    }
+
+    loadEquipmentModalWithReg(regRows);
+}
+
+/* ── Extended loadEquipmentModal that includes registration sheet data ── */
+function loadEquipmentModalWithReg(regRows) {
+    const loadMsg = document.getElementById('eqLoadMsg');
+    const allRows = [...(equipmentRawRows || [])];
+
+    // Merge registration rows
+    (regRows || []).forEach(rr => {
+        allRows.push(rr);
+    });
+
+    if (!allRows.length) {
+        if (loadMsg) loadMsg.style.display = 'block';
+        if (loadMsg) loadMsg.textContent = '⏳ جاري التحميل...';
+        setTimeout(() => { if (allRows.length || (regRows||[]).length) eqMergeNewSheetDataThenLoad(); }, 1500);
+        return;
+    }
+
+    if (loadMsg) loadMsg.style.display = 'none';
+
+    // Build combined headers
+    const skip = new Set(['ID','BAYAN','البيان','DESCRIPTION','بيان','البند','BAND','ALBND','ITEM','ELEMENT_NAME','CONTRACTOR','DATE','ALBAYAN']);
+    const colSet = new Set();
+    allRows.forEach(row => {
+        Object.keys(row).forEach(k => {
+            const u = k.trim().toUpperCase();
+            if (!skip.has(u) && !skip.has(k.trim()) && k.trim()) colSet.add(k.trim());
+        });
+    });
+    const cols = [...colSet].map(name => ({ name, key: name.toUpperCase() }));
+
+    // Detect band key
+    const bKey = (function() {
+        const found = allRows[0] ? Object.keys(allRows[0]).find(k => {
+            const u = k.trim().toUpperCase();
+            return u === 'البند' || u === 'BAND' || u === 'ALBND' || u === 'ITEM';
+        }) : null;
+        return found ? found.trim().toUpperCase() : null;
+    })();
+
+    const cKey = 'CONTRACTOR';
+
+    /* ── KPIs ── */
+    function sumCols(rows) {
+        const t = {};
+        cols.forEach(col => {
+            let s = 0;
+            rows.forEach(r => {
+                const v = parseFloat(r[col.key] || r[col.name] || 0);
+                if (!isNaN(v)) s += v;
+            });
+            if (s > 0) t[col.name] = s;
+        });
+        return t;
+    }
+
+    const totalsByType  = sumCols(allRows);
+    const grandTotal    = Object.values(totalsByType).reduce((a,b) => a+b, 0);
+    const contractors   = new Set(allRows.map(r => (r[cKey] || r['CONTRACTOR'] || '').trim()).filter(Boolean));
+    const bands         = new Set(allRows.map(r => (r[bKey] || r['البند'] || '').trim()).filter(Boolean));
+
+    const setEl = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    setEl('eqKpiTypes',       Object.keys(totalsByType).length);
+    setEl('eqKpiTotal',       fmtNum(grandTotal));
+    setEl('eqKpiContractors', contractors.size || '—');
+    setEl('eqKpiBands',       bands.size || '—');
+    setEl('eqLastUpdate',     'آخر تحديث: ' + new Date().toLocaleTimeString('ar-SA') + ' — ' + allRows.length + ' سجل (أصلي + مسجل)');
+
+    /* ── Overview chart ── */
+    const entries = Object.entries(totalsByType).sort((a,b) => b[1]-a[1]);
+    const legendEl = document.getElementById('eqOverviewLegend');
+    if (legendEl) {
+        legendEl.innerHTML = entries.map(([name, val], i) =>
+            `<span style="display:flex;align-items:center;gap:5px;">
+                <span style="width:10px;height:10px;border-radius:2px;background:${EQ_PALETTE[i%EQ_PALETTE.length]};display:inline-block;"></span>
+                ${name}: <strong style="color:var(--gold);">${fmtNum(val)}</strong>
+            </span>`).join('');
+    }
+    if (_eqChartInst) { _eqChartInst.destroy(); _eqChartInst = null; }
+    const cvs = document.getElementById('eqOverviewChart');
+    if (cvs && entries.length) {
+        const doChart = () => {
+            _eqChartInst = new Chart(cvs, {
+                type: 'bar',
+                data: {
+                    labels: entries.map(([name]) => name),
+                    datasets: [{
+                        label: 'عدد المعدات',
+                        data: entries.map(([,v]) => v),
+                        backgroundColor: entries.map((_, i) => EQ_PALETTE[i % EQ_PALETTE.length]),
+                        borderRadius: 5,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: ctx => ' ' + ctx.parsed.y.toLocaleString('en-US') + ' وحدة' } }
+                    },
+                    scales: {
+                        x: { ticks: { autoSkip: false, maxRotation: 40, color: 'rgba(255,255,255,0.55)', font: { size: 11 } }, grid: { display: false } },
+                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.07)' }, ticks: { color: 'rgba(255,255,255,0.55)', font: { size: 11 }, callback: v => v.toLocaleString('en-US') } }
+                    }
+                }
+            });
+        };
+        if (typeof Chart !== 'undefined') doChart();
+        else {
+            const s = document.createElement('script');
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js';
+            s.onload = doChart;
+            document.head.appendChild(s);
+        }
+    }
+
+    /* ── By Contractor ── */
+    const contractorWrap = document.getElementById('eqContractorTableWrap');
+    if (contractorWrap) {
+        const byC = {};
+        allRows.forEach(row => {
+            const c = (row['CONTRACTOR'] || row[cKey] || '').trim();
+            if (!c) return;
+            if (!byC[c]) byC[c] = { rows: [], bands: new Set() };
+            byC[c].rows.push(row);
+            const b = row[bKey] || row['البند'] || '';
+            if (b) byC[c].bands.add(b.trim());
+        });
+        if (!Object.keys(byC).length) {
+            contractorWrap.innerHTML = '<div class="bd-msg bd-msg-load">لا يوجد بيانات مقاولين</div>';
+        } else {
+            const sortedC = Object.entries(byC).sort((a,b) => {
+                const ta = Object.values(sumCols(a[1].rows)).reduce((x,y)=>x+y,0);
+                const tb = Object.values(sumCols(b[1].rows)).reduce((x,y)=>x+y,0);
+                return tb - ta;
+            });
+            let html = '<table class="bd-tbl"><thead><tr><th>المقاول</th><th>البند</th><th style="min-width:90px;text-align:center;">الإجمالي</th><th>تفاصيل المعدات</th></td></thead><tbody>';
+            sortedC.forEach(([name, data]) => {
+                const t = sumCols(data.rows);
+                const tot = Object.values(t).reduce((a,b)=>a+b,0);
+                const bandsStr = [...data.bands].join(' • ') || '—';
+                const pillsArr = Object.entries(t).sort((a,b)=>b[1]-a[1]);
+                const pills = pillsArr.slice(0,5).map(([pn, pv]) =>
+                    `<span class="eq-pill-dark">${pn}: <strong>${fmtNum(pv)}</strong></span>`).join(' ');
+                const more = pillsArr.length > 5 ? `<span class="eq-pill-dark">+${pillsArr.length-5} أخرى</span>` : '';
+                html += `<tr>
+                    <td style="font-weight:700;color:var(--gold);">${name}</td>
+                    <td style="font-size:11px;color:rgba(255,255,255,0.55);">${bandsStr}</td>
+                    <td style="text-align:center;"><span style="background:rgba(245,200,66,0.12);border:1px solid rgba(245,200,66,0.3);color:var(--gold);padding:2px 10px;border-radius:4px;font-weight:900;font-size:13px;">${fmtNum(tot)}</span></td>
+                    <td><div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;">${pills}${more}</div></td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            contractorWrap.innerHTML = html;
+        }
+    }
+
+    /* ── By Band ── */
+    const bandWrap = document.getElementById('eqBandTableWrap');
+    if (bandWrap) {
+        const byB = {};
+        allRows.forEach(row => {
+            const b = (row[bKey] || row['البند'] || '').trim();
+            if (!b) return;
+            if (!byB[b]) byB[b] = { rows: [], contractors: new Set() };
+            byB[b].rows.push(row);
+            const c = (row['CONTRACTOR'] || row[cKey] || '').trim();
+            if (c) byB[b].contractors.add(c);
+        });
+        if (!Object.keys(byB).length) {
+            bandWrap.innerHTML = '<div class="bd-msg bd-msg-load">لا يوجد بيانات بنود</div>';
+        } else {
+            const sortedB = Object.entries(byB).sort((a,b) => a[0].localeCompare(b[0],'ar'));
+            let html = '<table class="bd-tbl"><thead><tr><th>البند</th><th>المقاولون</th><th style="min-width:90px;text-align:center;">الإجمالي</th><th>تفاصيل المعدات</th></tr></thead><tbody>';
+            sortedB.forEach(([name, data]) => {
+                const t = sumCols(data.rows);
+                const tot = Object.values(t).reduce((a,b)=>a+b,0);
+                const cStr = [...data.contractors].join(' • ') || '—';
+                const pillsArr = Object.entries(t).sort((a,b)=>b[1]-a[1]);
+                const pills = pillsArr.slice(0,5).map(([pn,pv]) =>
+                    `<span class="eq-pill-dark">${pn}: <strong>${fmtNum(pv)}</strong></span>`).join(' ');
+                const more = pillsArr.length > 5 ? `<span class="eq-pill-dark">+${pillsArr.length-5} أخرى</span>` : '';
+                html += `<td>
+                    <td style="font-weight:700;color:rgba(255,255,255,0.9);">${name}</td>
+                    <td style="font-size:11px;color:rgba(255,255,255,0.55);">${cStr}</td>
+                    <td style="text-align:center;"><span style="background:rgba(33,150,243,0.15);border:1px solid rgba(33,150,243,0.4);color:#5baddf;padding:2px 10px;border-radius:4px;font-weight:900;font-size:13px;">${fmtNum(tot)}</span></td>
+                    <td><div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;">${pills}${more}</div></td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            bandWrap.innerHTML = html;
+        }
+    }
+
+    /* ── Matrix ── */
+    const matrixWrap = document.getElementById('eqMatrixWrap');
+    if (matrixWrap) {
+        const contractorList = [...contractors].sort();
+        const activeCols = cols.filter(col => {
+            let s = 0;
+            allRows.forEach(r => {
+                const v = parseFloat(r[col.key] || r[col.name] || 0);
+                if (!isNaN(v)) s += v;
+            });
+            return s > 0;
+        });
+        if (!contractorList.length) {
+            matrixWrap.innerHTML = '<div class="bd-msg bd-msg-load">لا يوجد بيانات كافية للمصفوفة</div>';
+        } else {
+            const byC2 = {};
+            allRows.forEach(row => {
+                const c = (row['CONTRACTOR'] || row[cKey] || '').trim();
+                if (!c) return;
+                if (!byC2[c]) byC2[c] = {};
+                activeCols.forEach(col => {
+                    const v = parseFloat(row[col.key] || row[col.name] || 0);
+                    if (!isNaN(v)) byC2[c][col.name] = (byC2[c][col.name]||0) + v;
+                });
+            });
+            const colMaxes = {};
+            activeCols.forEach(col => {
+                colMaxes[col.name] = Math.max(...contractorList.map(c => (byC2[c]||{})[col.name]||0), 1);
+            });
+            let html = `<table class="bd-tbl" style="min-width:${activeCols.length*75+180}px;">
+                <thead><tr><th style="min-width:160px;">المقاول</th>
+                ${activeCols.map(c => `<th style="min-width:70px;text-align:center;font-size:10px;">${c.name}</th>`).join('')}
+                <th style="min-width:80px;text-align:center;">المجموع</th>
+                </tr></thead><tbody>`;
+            contractorList.forEach(c => {
+                const cData = byC2[c] || {};
+                const rowTot = activeCols.reduce((a, col) => a + (cData[col.name]||0), 0);
+                html += `<tr><td style="font-weight:700;color:rgba(255,255,255,0.85);">${c}</td>
+                    ${activeCols.map(col => {
+                        const v = cData[col.name] || 0;
+                        const pct = v / colMaxes[col.name];
+                        const bg = v > 0 ? `rgba(245,200,66,${0.1 + pct * 0.65})` : 'transparent';
+                        return `<td style="text-align:center;background:${bg};font-variant-numeric:tabular-nums;color:${v>0?'rgba(255,255,255,0.9)':'rgba(255,255,255,0.2)'};">${v>0?fmtNum(v):'—'}</td>`;
+                    }).join('')}
+                    <td style="text-align:center;"><span style="background:rgba(245,200,66,0.12);border:1px solid rgba(245,200,66,0.3);color:var(--gold);padding:2px 8px;border-radius:4px;font-weight:900;font-size:12px;">${fmtNum(rowTot)}</span></td>
+                </tr>`;
+            });
+            const grandRow = activeCols.reduce((a,col) => {
+                const s = contractorList.reduce((x,c) => x+((byC2[c]||{})[col.name]||0),0);
+                return a + s;
+            }, 0);
+            html += `<tr style="border-top:1px solid rgba(255,255,255,0.12);">
+                <td style="font-weight:900;color:rgba(255,255,255,0.6);font-size:11px;">الإجمالي الكلي</td>
+                ${activeCols.map(col => {
+                    const s = contractorList.reduce((a,c) => a+((byC2[c]||{})[col.name]||0),0);
+                    return `<td style="text-align:center;font-weight:700;color:rgba(255,255,255,0.55);font-size:11px;">${s>0?fmtNum(s):'—'}</td>`;
+                }).join('')}
+                <td style="text-align:center;"><span style="background:rgba(255,152,0,0.15);border:1px solid rgba(255,152,0,0.4);color:#ff9800;padding:2px 8px;border-radius:4px;font-weight:900;">${fmtNum(grandTotal)}</span></td>
+            <tr></tbody></table>`;
+            matrixWrap.innerHTML = html;
+        }
+    }
+
+    eqSwitchTab(_eqActiveTab);
+}
+
+/* ── Patch refresh button to also use merged data ── */
+const _eqRefreshBtn = document.querySelector('[onclick="loadEquipmentModal()"]');
+// Override the button onclick after DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.querySelector('[onclick="loadEquipmentModal()"]');
+    if (btn) btn.setAttribute('onclick', 'eqMergeNewSheetDataThenLoad()');
+});
+
+// Also patch loadEquipmentModal called from footer refresh
+window.loadEquipmentModal = function() {
+    _eqRegCache = null; // force fresh fetch
+    eqMergeNewSheetDataThenLoad();
+};
+
+/* ====================================================
+   EQUIPMENT TYPES MANAGEMENT — Admin Only
+   إدارة قائمة أنواع المعدات — للأدمن فقط
+   ==================================================== */
+
+function saveEquipmentTypes() {
+    // حفظ مؤقت في الجلسة فقط — المصدر الأساسي هو categories.json
+    // الأدمن يصدّر الملف ليتشاركه مع بقية المستخدمين
+    refreshEquipmentDatalist();
+    updateEqTypesCount();
+}
+
+function refreshEquipmentDatalist() {
+    // أعد بناء كل الـ select الموجودة في نموذج التسجيل مع مراعاة المعدات المختارة
+    var used = eqGetUsedTypes ? eqGetUsedTypes() : new Set();
+    document.querySelectorAll('.eq-type-inp').forEach(function(sel) {
+        var currentVal = sel.value;
+        sel.innerHTML = '<option value="" disabled>-- اختر نوع المعدة --</option>' +
+            equipmentTypes.map(function(t) {
+                var isUsed = used.has(t) && t !== currentVal;
+                return '<option value="' + t + '"' +
+                    (t === currentVal ? ' selected' : '') +
+                    (isUsed ? ' hidden' : '') +
+                    '>' + t + '</option>';
+            }).join('');
+        if (!equipmentTypes.includes(currentVal)) sel.value = '';
+        // ربط حدث التغيير إن لم يكن مربوطاً
+        if (!sel._eqChangeListenerAdded) {
+            sel._eqChangeListenerAdded = true;
+            sel.addEventListener('change', function() { eqRefreshAllSelects(); });
+        }
+    });
+}
+
+function updateEqTypesCount() {
+    const el = document.getElementById('eqTypesCount');
+    if (el) el.textContent = equipmentTypes.length + ' نوع معدة في القائمة';
+}
+
+function renderEquipmentTypesList() {
+    const list = document.getElementById('eqTypesList');
+    if (!list) return;
+
+    updateEqTypesCount();
+
+    if (!equipmentTypes.length) {
+        list.innerHTML = `<div style="text-align:center;color:var(--text-soft);font-size:11px;padding:16px 0;line-height:1.8;">
+            لا توجد أنواع معدات بعد<br>
+            <span style="opacity:0.7;">أضف من الحقل أعلاه ثم صدّر categories.json ⬇</span>
+        </div>`;
+        return;
+    }
+
+    list.innerHTML = equipmentTypes.map((type, idx) => `
+        <div class="eq-type-row" id="eqtyperow_${idx}" draggable="true"
+             ondragstart="eqTypeDragStart(event, ${idx})"
+             ondragover="eqTypeDragOver(event)"
+             ondrop="eqTypeDrop(event, ${idx})"
+             ondragend="eqTypeDragEnd(event)"
+             ondragleave="eqTypeDragLeave(event)"
+             style="display:flex;align-items:center;gap:8px;padding:6px 9px;
+                    background:rgba(39,174,106,0.04);border:1px solid rgba(39,174,106,0.12);
+                    border-radius:7px;margin-bottom:4px;cursor:grab;
+                    transition:all 0.15s;user-select:none;">
+            <span style="color:rgba(39,174,106,0.5);font-size:13px;flex-shrink:0;" title="اسحب لإعادة الترتيب">⠿</span>
+            <span style="flex:1;font-size:12px;font-weight:600;color:var(--text);text-align:right;">${type}</span>
+            <button onclick="editEquipmentType(${idx})"
+                title="تعديل الاسم"
+                style="background:rgba(33,150,243,0.08);border:1px solid rgba(33,150,243,0.25);
+                       color:#2196f3;width:24px;height:24px;border-radius:5px;
+                       cursor:pointer;font-size:11px;display:flex;align-items:center;
+                       justify-content:center;flex-shrink:0;transition:all 0.15s;
+                       font-family:'Cairo',sans-serif;"
+                onmouseover="this.style.background='rgba(33,150,243,0.18)'"
+                onmouseout="this.style.background='rgba(33,150,243,0.08)'">✎</button>
+            <button onclick="deleteEquipmentType(${idx})"
+                title="حذف"
+                style="background:rgba(244,67,54,0.08);border:1px solid rgba(244,67,54,0.25);
+                       color:#e53935;width:24px;height:24px;border-radius:5px;
+                       cursor:pointer;font-size:11px;display:flex;align-items:center;
+                       justify-content:center;flex-shrink:0;transition:all 0.15s;
+                       font-family:'Cairo',sans-serif;"
+                onmouseover="this.style.background='rgba(244,67,54,0.18)'"
+                onmouseout="this.style.background='rgba(244,67,54,0.08)'">✕</button>
+        </div>`).join('');
+}
+
+/* ── Drag & Drop — إعادة ترتيب أنواع المعدات ── */
+let _eqTypeDragIdx = null;
+
+function eqTypeDragStart(e, idx) {
+    _eqTypeDragIdx = idx;
+    e.currentTarget.style.opacity = '0.4';
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function eqTypeDragEnd(e) {
+    e.currentTarget.style.opacity = '1';
+    document.querySelectorAll('.eq-type-row').forEach(r => {
+        r.style.borderColor = 'rgba(39,174,106,0.12)';
+        r.style.opacity = '1';
+    });
+    _eqTypeDragIdx = null;
+}
+
+function eqTypeDragOver(e) {
+    e.preventDefault();
+    e.currentTarget.style.borderColor = '#f5c842';
+    e.dataTransfer.dropEffect = 'move';
+}
+
+function eqTypeDragLeave(e) {
+    e.currentTarget.style.borderColor = 'rgba(39,174,106,0.12)';
+}
+
+function eqTypeDrop(e, toIdx) {
+    e.preventDefault();
+    e.currentTarget.style.borderColor = 'rgba(39,174,106,0.12)';
+    if (_eqTypeDragIdx === null || _eqTypeDragIdx === toIdx) return;
+    const moved = equipmentTypes.splice(_eqTypeDragIdx, 1)[0];
+    const adjustedIdx = _eqTypeDragIdx < toIdx ? toIdx - 1 : toIdx;
+    equipmentTypes.splice(adjustedIdx, 0, moved);
+    _eqTypeDragIdx = null;
+    saveEquipmentTypes();
+    renderEquipmentTypesList();
+}
+
+function addEquipmentType() {
+    const inp = document.getElementById('eqTypeNewInput');
+    if (!inp) return;
+    const val = inp.value.trim();
+    if (!val) { showAlert('❌ أدخل اسم المعدة'); return; }
+    if (equipmentTypes.map(t=>t.trim()).includes(val)) { showAlert('⚠️ هذا النوع موجود بالفعل'); return; }
+    equipmentTypes.push(val);
+    saveEquipmentTypes();
+    renderEquipmentTypesList();
+    inp.value = '';
+    inp.focus();
+    showAlert('✅ تمت الإضافة: ' + val, 'success');
+}
+
+function editEquipmentType(idx) {
+    const current = equipmentTypes[idx];
+    const newName = prompt('تعديل نوع المعدة:', current);
+    if (newName === null) return;
+    const trimmed = newName.trim();
+    if (!trimmed) { showAlert('❌ الاسم لا يمكن أن يكون فارغاً'); return; }
+    if (trimmed === current) return;
+    if (equipmentTypes.some((t,i) => i !== idx && t.trim() === trimmed)) {
+        showAlert('⚠️ هذا الاسم موجود بالفعل'); return;
+    }
+    equipmentTypes[idx] = trimmed;
+    saveEquipmentTypes();
+    renderEquipmentTypesList();
+    showAlert('✅ تم التعديل: ' + trimmed, 'success');
+}
+
+function deleteEquipmentType(idx) {
+    const name = equipmentTypes[idx];
+    if (!confirm(`حذف "${name}" من قائمة أنواع المعدات؟`)) return;
+    equipmentTypes.splice(idx, 1);
+    saveEquipmentTypes();
+    renderEquipmentTypesList();
+    showAlert('✅ تم الحذف', 'success');
+}
+
+function resetEquipmentTypesToDefault() {
+    if (!confirm('مسح جميع أنواع المعدات؟ ستصبح القائمة فارغة.')) return;
+    equipmentTypes = [];
+    saveEquipmentTypes();
+    renderEquipmentTypesList();
+    showAlert('✅ تم مسح القائمة', 'success');
+}
+
+function importEquipmentTypesFromCSV() {
+    const area = document.getElementById('eqTypesImportArea');
+    if (!area) return;
+    const raw = area.value.trim();
+    if (!raw) { showAlert('❌ الحقل فارغ'); return; }
+    const items = raw.split(/[\n,،]+/).map(s => s.trim()).filter(Boolean);
+    const existing = equipmentTypes.map(t => t.trim());
+    const newOnes = items.filter(i => !existing.includes(i));
+    if (!newOnes.length) { showAlert('⚠️ جميع الأنواع موجودة بالفعل'); return; }
+    equipmentTypes = [...equipmentTypes, ...newOnes];
+    saveEquipmentTypes();
+    renderEquipmentTypesList();
+    area.value = '';
+    showAlert(`✅ تمت إضافة ${newOnes.length} نوع جديد`, 'success');
+}
+/* ====================================================
+   CUMULATIVE QTY TAB — تبويب الكمية التراكمية
+   يُضاف في نهاية equipment.js
+   ==================================================== */
+
+/* ── حالة التبويب النشط في مودال تسجيل المعدات ── */
+let _eqFormActiveTab = 'daily'; // 'daily' | 'cumulative'
+
+/* ── flag: هل نحن في وضع اختيار من الخريطة للتراكمي؟ ── */
+let _eqPickingFromMapCumul = false;
+
+/* ── تبديل التبويب ── */
+function eqSwitchFormTab(tab) {
+    _eqFormActiveTab = tab;
+    const isDaily = tab === 'daily';
+
+    const btnDaily = document.getElementById('eqfTabDaily');
+    const btnCumul = document.getElementById('eqfTabCumul');
+    if (btnDaily) {
+        btnDaily.style.background = isDaily ? 'rgba(255,255,255,0.9)' : 'transparent';
+        btnDaily.style.color      = isDaily ? '#1a6040' : 'rgba(255,255,255,0.65)';
+    }
+    if (btnCumul) {
+        btnCumul.style.background = !isDaily ? 'rgba(255,255,255,0.9)' : 'transparent';
+        btnCumul.style.color      = !isDaily ? '#1a4a8a' : 'rgba(255,255,255,0.65)';
+    }
+
+    const bodyDaily = document.getElementById('eqfBodyDaily');
+    const bodyCumul = document.getElementById('eqfBodyCumul');
+    if (bodyDaily) bodyDaily.style.display = isDaily ? 'block' : 'none';
+    if (bodyCumul) bodyCumul.style.display = !isDaily ? 'block' : 'none';
+
+    const submitBtn = document.getElementById('eqf_submit_btn');
+    if (submitBtn) {
+        submitBtn.textContent = isDaily ? '💾 حفظ في السجل' : '💾 حفظ الكمية التراكمية';
+    }
+}
+
+/* ── فتح المودال: إعادة تعيين + تبويب يومي افتراضياً ── */
+const _origOpenEquipmentFormModal_cumul = window.openEquipmentFormModal;
+window.openEquipmentFormModal = function() {
+    _origOpenEquipmentFormModal_cumul();
+    eqSwitchFormTab('daily');
+    const today = new Date().toISOString().split('T')[0];
+    const cDate = document.getElementById('eqfc_date');
+    if (cDate) cDate.value = today;
+    eqPopulateCumulContractors();
+};
+
+/* ── ملء قائمة المقاولين في تبويب التراكمي ── */
+function eqPopulateCumulContractors() {
+    const sel = document.getElementById('eqfc_contractor');
+    if (!sel) return;
+    const currentVal = sel.value;
+    sel.innerHTML = '<option value="">-- اختر المقاول --</option>';
+    const contractors = new Set();
+    Object.values(allData || {}).forEach(sheetData => {
+        Object.values(sheetData).forEach(row => {
+            const c = (row['CONTRACTOR'] || '').trim();
+            if (c) contractors.add(c);
+        });
+    });
+    Object.keys(contractorMap || {}).forEach(name => {
+        if (name.trim()) contractors.add(name.trim());
+    });
+    [...contractors].sort((a, b) => a.localeCompare(b, 'ar')).forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+    });
+    if (currentVal) sel.value = currentVal;
+}
+
+/* ── مسح عنصر تبويب التراكمي ── */
+function eqClearCumulElement() {
+    ['eqfc_element_id','eqfc_element_name','eqfc_element_search',
+     'eqfc_item_name','eqfc_band_sheet','eqfc_cat_name',
+     'eqfc_cat_id','eqfc_group_name','eqfc_group_id'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    const info = document.getElementById('eqfc_element_info');
+    if (info) info.style.display = 'none';
+    // band display is now a readonly input — no button to manipulate
+    const lbl = document.getElementById('eqfc_band_display');
+    if (lbl) { lbl.value = ''; lbl.style.opacity = ''; }
+    const badge = document.getElementById('eqfc_current_badge');
+    if (badge) badge.style.display = 'none';
+}
+
+/* ════════════════════════════════════════════════════
+   زر "اختر من الخريطة" للتبويب التراكمي
+   ════════════════════════════════════════════════════ */
+let _eqCumulMapClickHandler   = null;
+let _eqCumulMapBgClickHandler = null;
+
+function eqPickFromMapCumul() {
+    if (!map) { showAlert('❌ الخريطة غير جاهزة'); return; }
+    if (!Object.keys(allLayers).length) {
+        showAlert('❌ حمّل بنداً على الخريطة أولاً');
+        return;
+    }
+
+    _eqPickingFromMapCumul = true;
+
+    // إخفاء المودال
+    document.getElementById('equipmentFormModal').style.display = 'none';
+
+    // شريط التلميح
+    let hint = document.getElementById('eqPickMapHintCumul');
+    if (!hint) {
+        hint = document.createElement('div');
+        hint.id = 'eqPickMapHintCumul';
+        hint.style.cssText = [
+            'position:fixed','top:70px','left:50%','transform:translateX(-50%)',
+            'z-index:99999','background:linear-gradient(135deg,#1a4a8a,#2196f3)',
+            'color:white','padding:12px 24px','border-radius:12px',
+            'font-size:13px','font-weight:700','font-family:\'Cairo\',sans-serif',
+            'box-shadow:0 8px 28px rgba(33,150,243,0.5)',
+            'display:flex','align-items:center','gap:14px','white-space:nowrap',
+            'pointer-events:auto'
+        ].join(';');
+        hint.innerHTML =
+            '<span>🗺 انقر على العنصر في الخريطة لاختياره</span>' +
+            '<button onclick="eqCancelPickFromMapCumul()" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;padding:4px 12px;border-radius:7px;font-size:12px;font-weight:700;font-family:\'Cairo\',sans-serif;cursor:pointer;">إلغاء</button>';
+        document.body.appendChild(hint);
+    }
+    hint.style.display = 'flex';
+    map.getContainer().style.cursor = 'crosshair';
+
+    // click على كل feature
+    _eqCumulMapClickHandler = function(e) {
+        if (!_eqPickingFromMapCumul) return;
+        if (e.originalEvent) {
+            e.originalEvent.stopPropagation();
+            e.originalEvent.preventDefault();
+        }
+        if (map.closePopup) map.closePopup();
+
+        const row = _eqGetRowFromFeatureEvent(e);
+        eqCancelPickFromMapCumul();
+
+        if (row) {
+            const nameKey = row['ROAD NAME'] ? 'ROAD NAME' : row['BLOCK NAME'] ? 'BLOCK NAME' : 'NAME';
+            const name = (row[nameKey] || '').trim() || row['ID'];
+            const id   = row['ID'] || '';
+            eqSelectCumulElement(id, name);
+            showAlert('✅ تم اختيار: ' + name, 'success');
+        }
+    };
+
+    // fallback: click على الخريطة الفارغة
+    _eqCumulMapBgClickHandler = function(e) {
+        if (!_eqPickingFromMapCumul) return;
+        let nearest = null, nearestDist = Infinity;
+        Object.entries(allLayers).forEach(([sheetId, layer]) => {
+            if (!layer || !allData[sheetId]) return;
+            layer.eachLayer(f => {
+                try {
+                    const center = f.getBounds ? f.getBounds().getCenter()
+                                 : f.getLatLng ? f.getLatLng() : null;
+                    if (!center) return;
+                    const d = map.distance(e.latlng, center);
+                    if (d < nearestDist) {
+                        nearestDist = d;
+                        const row = allData[sheetId][f.feature.properties.ID];
+                        if (row) nearest = row;
+                    }
+                } catch(err) {}
+            });
+        });
+        if (nearest && nearestDist < 500) {
+            _eqPickingFromMapCumul = false;
+            map.closePopup();
+            const nameKey = nearest['ROAD NAME'] ? 'ROAD NAME' : nearest['BLOCK NAME'] ? 'BLOCK NAME' : 'NAME';
+            const name = (nearest[nameKey] || '').trim() || nearest['ID'];
+            eqCancelPickFromMapCumul();
+            eqSelectCumulElement(nearest['ID'] || '', name);
+            showAlert('✅ تم اختيار: ' + name, 'success');
+        }
+    };
+
+    Object.values(allLayers).forEach(layer => {
+        if (!layer) return;
+        layer.eachLayer(f => { f.on('click', _eqCumulMapClickHandler); });
+    });
+    map.on('click', _eqCumulMapBgClickHandler);
+}
+
+function eqCancelPickFromMapCumul() {
+    _eqPickingFromMapCumul = false;
+    document.getElementById('equipmentFormModal').style.display = '';
+    const hint = document.getElementById('eqPickMapHintCumul');
+    if (hint) hint.style.display = 'none';
+    if (map) map.getContainer().style.cursor = '';
+    if (_eqCumulMapClickHandler) {
+        Object.values(allLayers).forEach(layer => {
+            if (!layer) return;
+            layer.eachLayer(f => { f.off('click', _eqCumulMapClickHandler); });
+        });
+        _eqCumulMapClickHandler = null;
+    }
+    if (map && _eqCumulMapBgClickHandler) {
+        map.off('click', _eqCumulMapBgClickHandler);
+        _eqCumulMapBgClickHandler = null;
+    }
+    if (map) map.closePopup();
+}
+
+/* ════════════════════════════════════════════════════
+   اختيار عنصر من القائمة النصية — تبويب التراكمي
+   ════════════════════════════════════════════════════ */
+function eqFilterCumulElementDropdown() {
+    const inp = document.getElementById('eqfc_element_search');
+    const dd  = document.getElementById('eqfc_element_dropdown');
+    if (!inp || !dd) return;
+    const q = (inp.value || '').trim().toLowerCase();
+
+    const filtered = q
+        ? _eqAllElements.filter(e => e.name.toLowerCase().includes(q) || e.id.toLowerCase().includes(q))
+        : _eqAllElements;
+
+    if (!filtered.length) {
+        dd.innerHTML = '<div style="padding:12px 14px;text-align:center;color:rgba(255,255,255,0.3);font-size:12px;font-family:\'Cairo\',sans-serif;">لا توجد عناصر مطابقة</div>';
+    } else {
+        dd.innerHTML = filtered.slice(0, 60).map(e =>
+            '<div onclick="eqSelectCumulElement(\'' + e.id.replace(/'/g,"\\'") + '\',\'' + e.name.replace(/'/g,"\\'") + '\')" ' +
+            'style="padding:9px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);transition:background 0.15s;display:flex;flex-direction:column;gap:2px;" ' +
+            'onmouseover="this.style.background=\'rgba(33,150,243,0.12)\'" onmouseout="this.style.background=\'\'">'+
+            '<span style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.9);font-family:\'Cairo\',sans-serif;">' + e.name + '</span>' +
+            '<span style="font-size:10px;color:rgba(255,255,255,0.4);font-family:\'Cairo\',sans-serif;">ID: ' + e.id + ' • ' + e.subName + '</span>' +
+            '</div>'
+        ).join('');
+    }
+    dd.style.display = 'block';
+
+    setTimeout(() => {
+        document.addEventListener('click', _eqCumulDropdownOutside, { once: true, capture: true });
+    }, 0);
+}
+
+function _eqCumulDropdownOutside(e) {
+    const dd  = document.getElementById('eqfc_element_dropdown');
+    const inp = document.getElementById('eqfc_element_search');
+    if (!dd || !inp) return;
+    if (!dd.contains(e.target) && e.target !== inp) {
+        dd.style.display = 'none';
+    } else {
+        document.addEventListener('click', _eqCumulDropdownOutside, { once: true, capture: true });
+    }
+}
+
+function eqSelectCumulElement(id, name) {
+    document.getElementById('eqfc_element_id').value    = id;
+    document.getElementById('eqfc_element_name').value  = name;
+    document.getElementById('eqfc_element_search').value = name;
+    const dd = document.getElementById('eqfc_element_dropdown');
+    if (dd) dd.style.display = 'none';
+
+    const info = document.getElementById('eqfc_element_info');
+    if (info) {
+        document.getElementById('eqfc_element_info_name').textContent = name;
+        document.getElementById('eqfc_element_info_id').textContent   = 'ID: ' + id;
+        info.style.display = 'flex';
+    }
+
+    // ملء بيانات البند تلقائياً
+    const el = _eqAllElements.find(e => e.id === id && e.name === name)
+            || _eqAllElements.find(e => e.id === id);
+    if (!el) return;
+
+    let matchedSub = null, matchedCat = null;
+    (categories || []).forEach(cat => {
+        cat.subitems.forEach(sub => {
+            if (sub.sheetId === el.sheetId) { matchedSub = sub; matchedCat = cat; }
+        });
+    });
+    if (!matchedSub || !matchedCat) return;
+
+    document.getElementById('eqfc_item_name').value  = matchedSub.name;
+    document.getElementById('eqfc_band_sheet').value = matchedSub.sheetId || '';
+    document.getElementById('eqfc_cat_name').value   = matchedCat.name || '';
+    document.getElementById('eqfc_cat_id').value     = matchedCat.id   || '';
+
+    const lbl = document.getElementById('eqfc_band_display');
+    if (lbl) { lbl.value = matchedSub.name; lbl.style.opacity = '1'; }
+
+    // band display is now a readonly input — no button to manipulate
+
+    const group = getGroupForSub(matchedSub.id);
+    document.getElementById('eqfc_group_name').value = group ? (group.name || '—') : '—';
+    document.getElementById('eqfc_group_id').value   = group ? (group.id   || '')  : '';
+
+    // ── جلب الكميات الحالية من allData وملء الخانتين ──
+    _eqFillCumulQtys(id, matchedSub.sheetId);
+}
+
+/* ── جلب TOTAL-QTY و DONE-QTY من allData للعنصر المحدد ── */
+function _eqFillCumulQtys(elementId, sheetId) {
+    const totalInp = document.getElementById('eqfc_total_qty');
+    const doneInp  = document.getElementById('eqfc_cumul_qty');
+    if (!totalInp || !doneInp) return;
+
+    // أولاً: ابحث في allData المحملة في الذاكرة
+    const sheetData = allData[sheetId];
+    if (sheetData) {
+        const row = sheetData[elementId];
+        if (row) {
+            const total = row['TOTAL-QTY'] || row['TOTAL_QTY'] || '';
+            const done  = row['DONE-QTY']  || row['DONE_QTY']  || '';
+            if (total !== '' && total !== undefined) totalInp.value = parseFloat(total) || '';
+            if (done  !== '' && done  !== undefined) doneInp.value  = parseFloat(done)  || '';
+            _eqShowCumulCurrentBadge(total, done);
+            return;
+        }
+    }
+
+    // ثانياً: لو الشيت مش محمل في allData، اجلبه من Google Sheets مباشرة
+    if (!sheetId) return;
+    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`;
+    fetch(url)
+        .then(r => r.text())
+        .then(csv => {
+            const lines = csv.split('\n').filter(l => l.trim());
+            if (lines.length < 2) return;
+            const headers = lines[0].split(',').map(h => h.trim().toUpperCase());
+            const idIdx    = headers.indexOf('ID');
+            const totalIdx = headers.indexOf('TOTAL-QTY');
+            const doneIdx  = headers.indexOf('DONE-QTY');
+            if (idIdx === -1) return;
+            for (let i = 1; i < lines.length; i++) {
+                const vals = lines[i].split(',').map(v => v.trim());
+                if ((vals[idIdx] || '').trim() === elementId) {
+                    const total = totalIdx !== -1 ? (vals[totalIdx] || '') : '';
+                    const done  = doneIdx  !== -1 ? (vals[doneIdx]  || '') : '';
+                    if (total !== '') totalInp.value = parseFloat(total) || '';
+                    if (done  !== '') doneInp.value  = parseFloat(done)  || '';
+                    _eqShowCumulCurrentBadge(total, done);
+                    break;
+                }
+            }
+        })
+        .catch(() => {}); // صامت لو فشل الجلب
+}
+
+/* ── بادج يظهر القيم الحالية كـ hint للمستخدم ── */
+function _eqShowCumulCurrentBadge(total, done) {
+    let badge = document.getElementById('eqfc_current_badge');
+    if (!badge) {
+        // أنشئ البادج تحت خانة الكمية الإجمالية
+        const container = document.getElementById('eqfc_total_qty')?.closest('.eq-form-field')?.parentElement;
+        if (!container) return;
+        badge = document.createElement('div');
+        badge.id = 'eqfc_current_badge';
+        badge.style.cssText = 'grid-column:1/-1;padding:8px 12px;background:rgba(255,200,66,0.08);border:1px solid rgba(255,200,66,0.2);border-radius:8px;font-size:11px;font-family:\'Cairo\',sans-serif;color:rgba(255,255,255,0.55);display:flex;gap:16px;align-items:center;margin-top:-6px;';
+        container.appendChild(badge);
+    }
+    const t = parseFloat(total) || 0;
+    const d = parseFloat(done)  || 0;
+    const r = t - d;
+    const hasData = t > 0 || d > 0;
+    badge.style.display = hasData ? 'flex' : 'none';
+    badge.innerHTML = hasData
+        ? `<span style="opacity:0.7;">📊 القيم الحالية في الشيت:</span>
+           <span>الإجمالي: <strong style="color:rgba(255,200,66,0.9);">${t.toLocaleString('en-US')}</strong></span>
+           <span>المنفذ: <strong style="color:rgba(39,200,100,0.9);">${d.toLocaleString('en-US')}</strong></span>
+           <span>المتبقي: <strong style="color:rgba(91,173,223,0.9);">${r.toLocaleString('en-US')}</strong></span>`
+        : '';
+}
+/* ════════════════════════════════════════════════════
+   Band Picker للتبويب التراكمي
+   ════════════════════════════════════════════════════ */
+function eqOpenBandPickerCumul() {
+    window._eqBandPickerTarget = 'cumul';
+    eqOpenBandPicker();
+}
+
+const _origEqSelectBand_cumul = window.eqSelectBand;
+window.eqSelectBand = function(name, sheetId, catName, catId) {
+    if (window._eqBandPickerTarget === 'cumul') {
+        window._eqBandPickerTarget = null;
+        document.getElementById('eqfc_item_name').value  = name;
+        document.getElementById('eqfc_band_sheet').value = sheetId || '';
+        const lbl = document.getElementById('eqfc_band_display');
+        if (lbl) { lbl.value = name; lbl.style.opacity = '1'; }
+        // band is now readonly input — no btndocument.getElementById('eqfc_cat_name').value = catName || '';
+        document.getElementById('eqfc_cat_id').value   = catId   || '';
+        const sub = (categories || []).flatMap(c => c.subitems).find(s => s.sheetId === sheetId && s.name === name);
+        const group = sub ? getGroupForSub(sub.id) : null;
+        document.getElementById('eqfc_group_name').value = group ? (group.name || '—') : '—';
+        document.getElementById('eqfc_group_id').value   = group ? (group.id   || '')  : '';
+        eqCloseBandPicker();
+    } else {
+        window._eqBandPickerTarget = null;
+        _origEqSelectBand_cumul(name, sheetId, catName, catId);
+    }
+};
+
+/* ════════════════════════════════════════════════════
+   Feedback للتبويب التراكمي
+   ════════════════════════════════════════════════════ */
+function eqShowCumulFeedback(msg, type) {
+    const fb = document.getElementById('eqfc_feedback');
+    if (!fb) return;
+    fb.className = 'eqf-' + type;
+    fb.textContent = msg;
+    fb.style.display = 'block';
+    if (type === 'success') setTimeout(() => { fb.style.display = 'none'; fb.className = ''; }, 4000);
+}
+
+/* ════════════════════════════════════════════════════
+   إعادة تعيين تبويب التراكمي
+   ════════════════════════════════════════════════════ */
+function eqResetCumulForm() {
+    ['eqfc_element_id','eqfc_element_name','eqfc_element_search',
+     'eqfc_item_name','eqfc_band_sheet','eqfc_cat_name','eqfc_cat_id',
+     'eqfc_group_name','eqfc_group_id','eqfc_total_qty','eqfc_cumul_qty'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    const sel = document.getElementById('eqfc_contractor');
+    if (sel) sel.value = '';
+    const today = new Date().toISOString().split('T')[0];
+    const cDate = document.getElementById('eqfc_date');
+    if (cDate) cDate.value = today;
+    const info = document.getElementById('eqfc_element_info');
+    if (info) info.style.display = 'none';
+    const lbl = document.getElementById('eqfc_band_display');
+    if (lbl) { lbl.value = ''; lbl.style.opacity = ''; }
+    // band is now readonly input — no btnbtn.disabled = false; btn.style.opacity = ''; btn.style.cursor = ''; btn.title = ''; }
+    const fb = document.getElementById('eqfc_feedback');
+    if (fb) { fb.style.display = 'none'; fb.className = ''; }
+    const badge = document.getElementById('eqfc_current_badge');
+    if (badge) badge.style.display = 'none';
+}
+
+/* ════════════════════════════════════════════════════
+   إرسال بيانات التراكمي → Sheet1 مباشرة
+   يُحدِّث TOTAL-QTY و DONE-QTY ويحسب REMANING-QTY تلقائياً
+   ════════════════════════════════════════════════════ */
+async function eqSubmitCumulForm() {
+    const element_id   = document.getElementById('eqfc_element_id').value.trim();
+    const element_name = document.getElementById('eqfc_element_name').value.trim();
+    const item_name    = document.getElementById('eqfc_item_name').value.trim();
+    const cat_name     = document.getElementById('eqfc_cat_name').value.trim();
+    const group_name   = document.getElementById('eqfc_group_name').value.trim();
+    const contractor   = document.getElementById('eqfc_contractor').value.trim();
+    const date         = document.getElementById('eqfc_date').value.trim();
+    const total_qty    = parseFloat(document.getElementById('eqfc_total_qty').value) || 0;
+    const cumul_qty    = parseFloat(document.getElementById('eqfc_cumul_qty').value) || 0;
+    const band_sheet   = document.getElementById('eqfc_band_sheet').value.trim();
+
+    // Validation
+    if (!element_id)   { eqShowCumulFeedback('❌ يرجى اختيار العنصر', 'error'); return; }
+    if (!item_name)    { eqShowCumulFeedback('❌ يرجى اختيار البند', 'error'); return; }
+    if (!contractor)   { eqShowCumulFeedback('❌ يرجى اختيار المقاول', 'error'); return; }
+    if (!date)         { eqShowCumulFeedback('❌ يرجى اختيار التاريخ', 'error'); return; }
+    if (!band_sheet)   { eqShowCumulFeedback('❌ البند المختار ليس له شيت مرتبط', 'error'); return; }
+    if (!total_qty && !cumul_qty) {
+        eqShowCumulFeedback('❌ يرجى إدخال الكمية الإجمالية أو التراكمية', 'error');
+        return;
+    }
+
+    const btn = document.getElementById('eqf_submit_btn');
+    btn.disabled = true;
+    btn.textContent = '⏳ جاري الحفظ...';
+    eqShowCumulFeedback('⏳ جاري إرسال البيانات...', 'loading');
+
+    // جيب scriptUrl من البند الفرعي
+    let scriptUrl = '';
+    try {
+        const allSubs = (categories || []).flatMap(c => c.subitems || []);
+        const matchedSub = allSubs.find(s => s.sheetId === band_sheet);
+        if (matchedSub && matchedSub.scriptUrl) scriptUrl = matchedSub.scriptUrl.trim();
+        if (!scriptUrl) throw new Error(
+            'لم يتم العثور على رابط السكريبت\n' +
+            'تأكد من دبل كليك على البند الفرعي وإدخال رابط Apps Script'
+        );
+    } catch (fetchErr) {
+        eqShowCumulFeedback('❌ ' + fetchErr.message, 'error');
+        btn.disabled = false;
+        btn.textContent = '💾 حفظ الكمية التراكمية';
+        return;
+    }
+
+    // المتبقي يُحسب في السكريبت، لكن نرسله أيضاً للتوثيق
+    const remaining_qty = total_qty - cumul_qty;
+
+    const payload = {
+        form_type:     'cumulative',       // ← السكريبت يميّز بهذا الحقل
+        sheet_target:  'Sheet1',           // ← يكتب في Sheet1
+        element_id,
+        element_name,
+        item_name,
+        cat_name,
+        group_name,
+        contractor,
+        date,
+        total_qty,
+        cumul_qty,
+        remaining_qty  // للعرض، السكريبت يحسبها بنفسه أيضاً
+    };
+
+    try {
+        const r = await fetch(scriptUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify(payload),
+            redirect: 'follow'
+        });
+        const text = await r.text();
+        let resp = {};
+        try { resp = JSON.parse(text); } catch(e) {}
+
+        if (resp.status === 'success' || r.ok) {
+            eqShowCumulFeedback('✅ تم تحديث الكمية التراكمية في الشيت!', 'success');
+            showAlert('✅ تم حفظ الكمية التراكمية بنجاح', 'success');
+            setTimeout(() => eqResetCumulForm(), 2500);
+        } else {
+            throw new Error(resp.message || 'فشل الحفظ');
+        }
+    } catch(e) {
+        console.error('Cumulative form submit error:', e);
+        eqShowCumulFeedback('❌ تعذر الحفظ: ' + (e.message || 'خطأ في الاتصال'), 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '💾 حفظ الكمية التراكمية';
+    }
+}
+
+/* ════════════════════════════════════════════════════
+   تعديل eqResetForm و eqSubmitForm
+   لتوجيه الطلب للتبويب الصحيح
+   ════════════════════════════════════════════════════ */
+const _origEqResetForm_cumul = window.eqResetForm;
+window.eqResetForm = function() {
+    if (_eqFormActiveTab === 'cumulative') {
+        eqResetCumulForm();
+    } else {
+        _origEqResetForm_cumul();
+    }
+};
+
+const _origEqSubmitForm_cumul = window.eqSubmitForm;
+window.eqSubmitForm = function() {
+    if (_eqFormActiveTab === 'cumulative') {
+        eqSubmitCumulForm();
+    } else {
+        _origEqSubmitForm_cumul();
+    }
+}
