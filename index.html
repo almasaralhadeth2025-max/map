@@ -326,43 +326,73 @@
             </div>
 
 
-        <!-- ══ Hamburger Button (mobile only) ══ -->
-        <button id="mobileMenuBtn" onclick="toggleMobileMenu()" 
-            style="display:none;align-items:center;justify-content:center;width:36px;height:36px;border-radius:9px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:white;font-size:20px;cursor:pointer;flex-shrink:0;margin-right:2px;transition:all 0.2s;">
+        <!-- ══ Mobile Hamburger ══ -->
+        <button id="mobileMenuBtn"
+            onclick="toggleMobileMenu()"
+            style="display:none;align-items:center;justify-content:center;width:36px;height:36px;
+                   border-radius:9px;border:1px solid rgba(255,255,255,0.18);
+                   background:rgba(255,255,255,0.07);color:white;font-size:20px;
+                   cursor:pointer;flex-shrink:0;transition:all 0.2s;font-family:monospace;">
             ☰
         </button>
-    </div>
 
-    <!-- ══ Mobile Slide-Down Menu ══ -->
-    <div id="mobileMenu" style="display:none;position:fixed;top:52px;left:0;right:0;z-index:19999;background:linear-gradient(180deg,#1a0a2e 0%,#2d1060 100%);border-bottom:1px solid rgba(255,255,255,0.1);box-shadow:0 8px 32px rgba(0,0,0,0.5);padding:8px 12px 12px;flex-direction:column;gap:4px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 4px 10px;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:4px;">
-            <span style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.4);font-family:'Cairo',sans-serif;letter-spacing:0.5px;">📋 القائمة الرئيسية</span>
+    </div><!-- end top-nav -->
+
+    <!-- ══ Mobile Dropdown Menu ══ -->
+    <div id="mobileMenuOverlay" onclick="closeMobileMenu()"
+         style="display:none;position:fixed;inset:0;z-index:19998;background:rgba(0,0,0,0.45);"></div>
+    <div id="mobileMenu"
+         style="display:none;position:fixed;top:52px;right:0;left:0;z-index:19999;
+                background:linear-gradient(180deg,#1a0a2e 0%,#26104a 100%);
+                border-bottom:2px solid rgba(255,255,255,0.1);
+                box-shadow:0 12px 40px rgba(0,0,0,0.6);
+                padding:10px 14px 16px;flex-direction:column;gap:3px;
+                max-height:85vh;overflow-y:auto;">
+
+        <!-- قسم: التقارير -->
+        <div class="mm-section-label">📋 التقارير</div>
+        <div class="mm-item" onclick="openBillsModal();closeMobileMenu()">
+            <span>📊</span><span>داشبورد البنود</span>
         </div>
-        <div onclick="openBillsModal();closeMobileMenu()" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);cursor:pointer;">
-            <span style="font-size:17px;">📊</span>
-            <span style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.85);font-family:'Cairo',sans-serif;">داشبورد البنود</span>
+        <div class="mm-item" onclick="openCashflowModal();closeMobileMenu()">
+            <span>💰</span><span>التدفقات النقدية</span>
         </div>
-        <div onclick="openCashflowModal();closeMobileMenu()" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);cursor:pointer;">
-            <span style="font-size:17px;">💰</span>
-            <span style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.85);font-family:'Cairo',sans-serif;">التدفقات النقدية</span>
+        <div class="mm-item" onclick="openEquipmentModal();closeMobileMenu()">
+            <span>🚜</span><span>المعدات</span>
         </div>
-        <div onclick="openEquipmentModal();closeMobileMenu()" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);cursor:pointer;">
-            <span style="font-size:17px;">🚜</span>
-            <span style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.85);font-family:'Cairo',sans-serif;">المعدات</span>
+
+        <div class="mm-divider"></div>
+
+        <!-- قسم: الإضافة -->
+        <div class="mm-section-label">✏️ إضافة</div>
+        <div class="mm-item mm-item-green" onclick="openEquipmentFormModal();closeMobileMenu()">
+            <span>🚜</span><span>تسجيل الكمية - المعدات</span>
         </div>
-        <div style="height:1px;background:rgba(255,255,255,0.08);margin:4px 0;"></div>
-        <div onclick="openEquipmentFormModal();closeMobileMenu()" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:rgba(39,174,106,0.08);border:1px solid rgba(39,174,106,0.2);cursor:pointer;">
-            <span style="font-size:17px;">🚜</span>
-            <span style="font-size:13px;font-weight:700;color:#5cc890;font-family:'Cairo',sans-serif;">تسجيل الكمية - المعدات</span>
+        <div class="mm-item mm-item-blue" onclick="openCompanyCashflowForm();closeMobileMenu()">
+            <span>🏢</span><span>تدفق نقدي - الشركة</span>
         </div>
-        <div onclick="openCompanyCashflowForm();closeMobileMenu()" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:rgba(33,150,243,0.08);border:1px solid rgba(33,150,243,0.2);cursor:pointer;">
-            <span style="font-size:17px;">🏢</span>
-            <span style="font-size:13px;font-weight:700;color:#5baddf;font-family:'Cairo',sans-serif;">تدفق نقدي - الشركة</span>
+        <div class="mm-item mm-item-gold" onclick="openContractorCashflowForm();closeMobileMenu()">
+            <span>👷</span><span>تدفق نقدي - المقاولون</span>
         </div>
-        <div onclick="openContractorCashflowForm();closeMobileMenu()" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.2);cursor:pointer;">
-            <span style="font-size:17px;">👷</span>
-            <span style="font-size:13px;font-weight:700;color:#f5c842;font-family:'Cairo',sans-serif;">تدفق نقدي - المقاولون</span>
+
+        <div class="mm-divider"></div>
+
+        <!-- قسم: الأدوات -->
+        <div class="mm-section-label">🔧 الأدوات</div>
+        <div class="mm-item" onclick="togglePanel('contractorPanel');closeMobileMenu()">
+            <span>👷</span><span>المقاولون</span>
         </div>
+        <div class="mm-item" onclick="togglePanel('notifPanel');closeMobileMenu()">
+            <span>🔔</span><span>الإشعارات</span>
+            <span id="mmNotifDot" style="display:none;width:7px;height:7px;border-radius:50%;background:#e53935;margin-right:auto;"></span>
+        </div>
+        <div class="mm-item admin-only" onclick="togglePanel('settingsPanel');closeMobileMenu()">
+            <span>⚙️</span><span>الإعدادات</span>
+        </div>
+        <div class="mm-item" onclick="togglePanel('themePanel');closeMobileMenu()">
+            <span>🎨</span><span>الثيمات</span>
+        </div>
+
     </div>
 
     <!-- MAIN CONTENT -->
@@ -1166,29 +1196,23 @@
     <script src="equipment_autofill_patch.js"></script> 
 
     <script>
-    /* ══ Mobile Menu Functions ══ */
+    /* ══ Mobile Menu ══ */
     function toggleMobileMenu() {
-        const menu = document.getElementById('mobileMenu');
-        const btn  = document.getElementById('mobileMenuBtn');
-        const isOpen = menu.style.display === 'flex';
-        menu.style.display = isOpen ? 'none' : 'flex';
-        btn.innerHTML      = isOpen ? '☰' : '✕';
-        if (!isOpen) {
-            setTimeout(() => document.addEventListener('click', _mobileMenuOutside, { once: true, capture: true }), 80);
-        }
+        var menu    = document.getElementById('mobileMenu');
+        var overlay = document.getElementById('mobileMenuOverlay');
+        var btn     = document.getElementById('mobileMenuBtn');
+        var isOpen  = menu.style.display === 'flex';
+        menu.style.display    = isOpen ? 'none' : 'flex';
+        overlay.style.display = isOpen ? 'none' : 'block';
+        btn.innerHTML         = isOpen ? '☰' : '✕';
     }
     function closeMobileMenu() {
-        const menu = document.getElementById('mobileMenu');
-        const btn  = document.getElementById('mobileMenuBtn');
-        if (menu) { menu.style.display = 'none'; }
-        if (btn)  { btn.innerHTML = '☰'; }
-    }
-    function _mobileMenuOutside(e) {
-        const menu = document.getElementById('mobileMenu');
-        const btn  = document.getElementById('mobileMenuBtn');
-        if (menu && btn && !menu.contains(e.target) && e.target !== btn) {
-            closeMobileMenu();
-        }
+        var menu    = document.getElementById('mobileMenu');
+        var overlay = document.getElementById('mobileMenuOverlay');
+        var btn     = document.getElementById('mobileMenuBtn');
+        if (menu)    menu.style.display    = 'none';
+        if (overlay) overlay.style.display = 'none';
+        if (btn)     btn.innerHTML         = '☰';
     }
     </script>
 </body>
