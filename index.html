@@ -14,7 +14,6 @@
 <base target="_blank">
 </head>
 <body>
-<body>
 
 <!-- ==================== LOGIN SCREEN ==================== -->
 <div id="loginScreen">
@@ -388,19 +387,19 @@
                     letter-spacing:.8px;padding:10px 2px 4px;border-bottom:1px solid rgba(255,255,255,0.07);
                     margin-bottom:4px;">🔧 الأدوات</div>
 
-        <div class="mmRow" onclick="openPanelFromMobile('contractorPanel')">
+        <div class="mmRow" onclick="openPanelFromMobile('contractorPanel', event)">
             <span>👷</span><span>المقاولون</span>
         </div>
-        <div class="mmRow" onclick="openPanelFromMobile('notifPanel')">
+        <div class="mmRow" onclick="openPanelFromMobile('notifPanel', event)">
             <span>🔔</span><span>الإشعارات</span>
         </div>
-        <div class="mmRow admin-only" onclick="openPanelFromMobile('settingsPanel')">
+        <div class="mmRow admin-only" onclick="openPanelFromMobile('settingsPanel', event)">
             <span>⚙️</span><span>الإعدادات</span>
         </div>
-        <div class="mmRow" onclick="openPanelFromMobile('themePanel')">
+        <div class="mmRow" onclick="openPanelFromMobile('themePanel', event)">
             <span>🎨</span><span>الثيمات</span>
         </div>
-        <div class="mmRow" onclick="openPanelFromMobile('userDropdown')">
+        <div class="mmRow" onclick="openPanelFromMobile('userDropdown', event)">
             <span>👤</span><span>الحساب الشخصي</span>
         </div>
 
@@ -417,6 +416,7 @@
         o.style.display=open?'none':'block';
         b.innerHTML=open?'☰':'✕';
         b.style.background=open?'rgba(255,255,255,0.07)':'rgba(255,255,255,0.18)';
+        if(open) closeAllMobilePanels();
     }
     function closeMobileMenu(){
         var m=document.getElementById('mobileMenu');
@@ -425,7 +425,29 @@
         if(m){m.style.display='none';}
         if(o){o.style.display='none';}
         if(b){b.innerHTML='☰';b.style.background='rgba(255,255,255,0.07)';}
+        closeAllMobilePanels();
     }
+    function closeAllMobilePanels(){
+        var panels=['contractorPanel','notifPanel','themePanel','settingsPanel','userDropdown'];
+        for(var i=0;i<panels.length;i++){
+            var p=document.getElementById(panels[i]);
+            if(p){
+                p.classList.remove('active','ui-panel-sheet');
+            }
+        }
+        var overlay=document.getElementById('uiPanelOverlay');
+        if(overlay) overlay.style.display='none';
+    }
+    window.openPanelFromMobile = function(id, event){
+        if(event){
+            event.stopPropagation();
+            event.preventDefault();
+        }
+        closeMobileMenu();
+        setTimeout(function(){
+            if(typeof togglePanel === 'function') togglePanel(id);
+        }, 100);
+    };
     </script>
 
     <!-- MAIN CONTENT -->
