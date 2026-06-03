@@ -57,9 +57,9 @@
 
     window.openPanelFromMobile = function (id) {
         closeMobileMenu();
-        window.requestAnimationFrame(() => {
+        window.setTimeout(() => {
             if (typeof togglePanel === 'function') togglePanel(id);
-        });
+        }, 50);
     };
 
 
@@ -166,7 +166,8 @@
                     top: auto !important;
                     width: 100% !important;
                     max-width: 100% !important;
-                    max-height: 78vh !important;
+                    max-height: calc(100vh - 72px) !important;
+                    min-height: 120px !important;
                     border-radius: 22px 22px 0 0 !important;
                     z-index: 29995 !important;
                     box-shadow: 0 -10px 50px rgba(0,0,0,0.45) !important;
@@ -174,6 +175,7 @@
                     animation: uiSlideUp 0.28s cubic-bezier(0.34,1.1,0.64,1) !important;
                     display: flex !important;
                     flex-direction: column !important;
+                    padding-bottom: env(safe-area-inset-bottom, 14px) !important;
                 }
             }
             @keyframes uiSlideUp {
