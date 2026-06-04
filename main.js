@@ -564,9 +564,11 @@ function switchSettingsTab(tab) {
     document.getElementById('settingsTabDefault').classList.toggle('active', tab === 'default');
     document.getElementById('settingsTabSimilar').classList.toggle('active', tab === 'similar');
     document.getElementById('settingsTabEqtypes').classList.toggle('active', tab === 'eqtypes');
+    document.getElementById('settingsTabContractors').classList.toggle('active', tab === 'contractors');
     if (tab === 'similar') renderSimilarGroupsList();
     if (tab === 'default') renderDefaultSubPreview();
-    if (tab === 'eqtypes') { renderEquipmentTypesList(); updateEqTypesCount(); }
+    if (tab === 'eqtypes') { renderEquipmentTypesList(); updateEqTypesCount();
+    if (tab === 'contractors') { renderContractorsListSettings(); updateContractorsCount(); }
 }
 
 function saveSettingsCoords() {
@@ -858,7 +860,71 @@ function buildEquipmentPanel() {
     totalRow.style.display = "flex";
     totalVal.textContent = fmtNum(grandTotal);
 }
+/* ====================================================
+   CONTRACTORS LIST — admin managed
+   ==================================================== */
+let contractorsList = [];
 
+function renderContractorsListSettings() {
+    const container = document.getElementById('contractorsList');
+    if (!container) return;
+    if (!contractorsList.length) {
+        container.innerHTML = '<div style="text-align:center;color:var(--text-soft);font-size:11px;padding:12px 0;">لا يوجد مقاولون — أضف من الأعلى</div>';
+        updateContractorsCount();
+        return;
+    }
+    container.innerHTML = contractorsList.map((name, idx) => `
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(245,200,66,0.05);border:1px solid rgba(245,200,66,0.15);border-radius:7px;margin-bottom:5px;">
+            <span style="flex:1;font-size:12px;font-weight:700;color:var(--text);text-align:right;font-family:'Cairo',sans-serif;">👷 ${name}</span>
+            <button onclick="removeContractorFromList(${idx})"
+                style="background:rgba(244,67,54,0.08);border:1px solid rgba(244,67,54,0.25);color:#e53935;width:24px;height:24px;border-radius:6px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;"
+                onmouseover="this.style.background='rgba(244,67,54,0.2)'"
+                onmouseout="this.style.background='rgba(244,67,54,0.08)'">✕</button>
+        </div>`).join('');
+    updateContractorsCount();
+}
+
+function updateContractorsCount() {
+    const el = document.getElementById('contractorsCount');
+    if (el) el.textContent = contractorsList.length ? `${contractorsList.length} مقاول مسجل` : '';
+}
+
+function addContractorToList() {
+    const inp = document.getElementById('contractorNewInput');
+    if (!inp) return;
+    const name = inp.value.trim();
+    if (!name) { showAlert('❌ أدخل اسم المقاول'); return; }
+    if (contractorsList.includes(name)) { showAlert('⚠️ المقاول موجود مسبقاً'); inp.value = ''; return; }
+    contractorsList.push(name);
+    inp.value = '';
+    renderContractorsListSettings();
+    showAlert('✅ تمت الإضافة', 'success');
+}
+
+function removeContractorFromList(idx) {
+    contractorsList.splice(idx, 1);
+    renderContractorsListSettings();
+}
+
+function importContractorsFromCSV() {
+    const area = document.getElementById('contractorsImportArea');
+    if (!area) return;
+    const lines = area.value.split(/[\n,]/).map(s => s.trim()).filter(Boolean);
+    let added = 0;
+    lines.forEach(name => {
+        if (!contractorsList.includes(name)) { contractorsList.push(name); added++; }
+    });
+    area.value = '';
+    renderContractorsListSettings();
+    showAlert(`✅ تمت إضافة ${added} مقاول`, 'success');
+}
+
+function resetContractorsList() {
+    if (!confirm('مسح جميع المقاولين؟')) return;
+    contractorsList = [];
+    renderContractorsListSettings();
+    showAlert('✅ تم المسح', 'success');
+}
 /* ════════════════════════════════════════════════════════════════════════════════
    CONTRACTOR PANEL  →  contractors.js
    All contractor-related functionality has been extracted to contractors.js
@@ -1149,6 +1215,9 @@ async function loadCategoriesConfig() {
         // Load equipmentTypes from config if present (admin-managed list)
         if (!Array.isArray(data) && data.equipmentTypes && Array.isArray(data.equipmentTypes)) {
             equipmentTypes = data.equipmentTypes;
+        if (!Array.isArray(data) && data.contractorsList && Array.isArray(data.contractorsList)) {
+            contractorsList = data.contractorsList;
+        }
         }
     } catch(e) {
         console.warn("categories.json not found — starting empty");
@@ -1168,6 +1237,7 @@ function exportConfig() {
         similarGroups: similarGroups,
         defaultSubNumber: defaultSubNumber,
         equipmentTypes: equipmentTypes,
+        contractorsList: contractorsList,
         // Include current UI state for persistence
         selectedItems: selectedItems,
         selectedStatuses: selectedStatuses,
@@ -1220,6 +1290,9 @@ function importConfig(e) {
                     equipmentTypes = data.equipmentTypes;
                     refreshEquipmentDatalist();
                     if (document.getElementById('eqTypesList')) renderEquipmentTypesList();
+                }
+               if (data.contractorsList && Array.isArray(data.contractorsList)) {
+                   contractorsList = data.contractorsList;
                 }
                 if (data.selectedItems) selectedItems = data.selectedItems;
                 if (data.selectedStatuses) selectedStatuses = data.selectedStatuses;
