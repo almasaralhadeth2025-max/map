@@ -173,6 +173,7 @@
                             <button class="settings-tab" onclick="switchSettingsTab('default')">🏁 البند الافتراضي</button>
                             <button class="settings-tab" onclick="switchSettingsTab('similar')">🔗 البنود المتشابهة</button>
                             <button class="settings-tab" onclick="switchSettingsTab('eqtypes')">🚜 أنواع المعدات</button>
+                            <button class="settings-tab" onclick="switchSettingsTab('contractors')">👷 المقاولون</button>
                         </div>
                         <div class="settings-body">
                             <!-- Tab: Default Coordinates -->
@@ -227,6 +228,51 @@
                                         onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
                                         ＋ إضافة
                                     </button>
+                                </div>
+                                <!-- Tab: Contractors -->
+                                <div class="settings-section" id="settingsTabContractors">
+                                    <div style="font-size:11px;color:var(--text-soft);text-align:right;line-height:1.6;background:rgba(245,200,66,0.07);padding:8px 10px;border-radius:7px;border-right:3px solid var(--gold);margin-bottom:2px;">
+                                        قائمة المقاولين التي تظهر عند تسجيل المعدات والمستخلصات — تُحفظ في <strong>categories.json</strong>.
+                                    </div>
+                                    <!-- إضافة مقاول -->
+                                    <div style="display:flex;gap:7px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);margin-bottom:8px;">
+                                        <input type="text" id="contractorNewInput" class="settings-input"
+                                            placeholder="اسم المقاول الجديد..."
+                                            style="flex:1;"
+                                            onkeydown="if(event.key==='Enter') addContractorToList()">
+                                        <button onclick="addContractorToList()"
+                                            style="background:linear-gradient(135deg,#f5c842,#e8a800);border:none;color:#1a0a2e;padding:7px 13px;border-radius:7px;font-size:12px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all 0.2s;"
+                                            onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+                                            ＋ إضافة
+                                        </button>
+                                    </div>
+                                    <!-- إضافة متعددة -->
+                                    <details style="margin-bottom:8px;">
+                                        <summary style="font-size:11px;font-weight:700;color:var(--text-soft);cursor:pointer;padding:4px 0;user-select:none;">📥 إضافة متعددة (فصل بفاصلة أو سطر جديد)</summary>
+                                        <div style="margin-top:6px;display:flex;flex-direction:column;gap:5px;">
+                                            <textarea id="contractorsImportArea"
+                                                placeholder="شركة الإنشاء, مقاول الطرق&#10;أو كل مقاول في سطر..."
+                                                style="width:100%;height:70px;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;font-family:'Cairo',sans-serif;color:var(--text);background:var(--white);text-align:right;resize:vertical;outline:none;direction:rtl;"
+                                                onfocus="this.style.borderColor='var(--gold)'"
+                                                onblur="this.style.borderColor='var(--border)'"></textarea>
+                                            <button onclick="importContractorsFromCSV()"
+                                                style="align-self:flex-start;background:rgba(245,200,66,0.1);border:1px solid rgba(245,200,66,0.4);color:#b8860b;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;transition:all 0.2s;">
+                                                ＋ إضافة الكل
+                                            </button>
+                                        </div>
+                                    </details>
+                                    <!-- القائمة -->
+                                    <div id="contractorsList" style="max-height:240px;overflow-y:auto;padding-right:2px;">
+                                        <div style="text-align:center;color:var(--text-soft);font-size:11px;padding:12px 0;">افتح الإعدادات لتحميل القائمة</div>
+                                    </div>
+                                    <!-- Footer -->
+                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);gap:8px;flex-wrap:wrap;">
+                                        <span id="contractorsCount" style="font-size:10px;color:var(--text-soft);font-weight:600;"></span>
+                                        <button onclick="resetContractorsList()"
+                                            style="background:rgba(244,67,54,0.07);border:1px solid rgba(244,67,54,0.25);color:#e53935;padding:5px 10px;border-radius:6px;font-size:10px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;transition:all 0.2s;white-space:nowrap;">
+                                            🗑 مسح الكل
+                                        </button>
+                                    </div>
                                 </div>
                                 <!-- Import multiple types -->
                                 <details style="margin-bottom:8px;">
